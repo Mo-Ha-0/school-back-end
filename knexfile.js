@@ -1,13 +1,12 @@
 require('dotenv').config();
 module.exports = {
     development: {
-        client: 'pg',
         connection: {
-            host: '127.0.0.1',
+            host: 'dpg-d2m5ndf5r7bs73ecdru0-a.oregon-postgres.render.com',
             port: 5432,
-            user: 'postgres',
-            password: process.env.DB_PASS || '',
-            database: 'school_db_3',
+            user: 'mohammad',
+            password: process.env.DB_PASS,
+            database: 'school_n38e',
         },
     },
 
