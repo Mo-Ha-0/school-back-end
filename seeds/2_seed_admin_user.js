@@ -53,35 +53,35 @@ exports.seed = async function (knex) {
     const student = await roleService.getRoleByName('student');
 
     const existingUser1 = await knex('users')
-      .where({ email: 'student@system.com' })
-      .first();
+        .where({ email: 'student@system.com' })
+        .first();
 
-    if (!existingUser1) {
-      const result = await knex.transaction(async (trx) => {
-        // Create user within transaction
+    // if (!existingUser1) {
+    //   const result = await knex.transaction(async (trx) => {
+    //     // Create user within transaction
 
-        const user =  await userService.createUser({
-          name: 'System student',
-          email: 'student@system.com',
-          password_hash: hashedPassword1,
-          phone: '1234567890',
-          role_id:student[0].id,
-          birth_date: '1990-01-01',
-        }, trx);
+    //     const user =  await userService.createUser({
+    //       name: 'System student',
+    //       email: 'student@system.com',
+    //       password_hash: hashedPassword1,
+    //       phone: '1234567890',
+    //       role_id:student[0].id,
+    //       birth_date: '1990-01-01',
+    //     }, trx);
 
-        // Create student within the same transaction
-        const studentCreate = await studentService.createStudent({
-          user_id: user[0].id,
-          class_id:6,
-          curriculum_id:1,
-          grade_level:9,
-        }, trx);
+    //     // Create student within the same transaction
+    //     const studentCreate = await studentService.createStudent({
+    //       user_id: user[0].id,
+    //       class_id:6,
+    //       curriculum_id:1,
+    //       grade_level:9,
+    //     }, trx);
 
-        return studentCreate;
-      });
-     console.log(result)
+    //     return studentCreate;
+    //   });
+    //  console.log(result)
 
-    }
+    // }
 
     const hashedPass = await bcrypt.hashSync('Teacher123');
     const teacher = await roleService.getRoleByName('teacher');
