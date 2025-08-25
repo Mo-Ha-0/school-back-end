@@ -9,12 +9,22 @@ module.exports = {
             if (!errors.isEmpty()) {
                 return res.status(400).json({ errors: errors.array() });
             }
-            const { attendance } = req.body;
+            let { date, attendance } = req.body;
+            const created_by = req.user.id; // Get the authenticated user's ID
+
+            // Transform the attendance data to include date and created_by
+            const transformedAttendance = attendance.map((record) => ({
+                ...record,
+                date,
+                created_by,
+            }));
+            console.log(transformedAttendance);
+
             const AttendanceStudents =
                 await attendanceStudentsService.createAttendanceStudents(
-                    attendance
+                    transformedAttendance
                 );
-            res.status(201).json(AttendanceStudents);
+            res.status(201).json({ attendance: AttendanceStudents });
         } catch (error) {
             res.status(400).json({ error: error.message });
         }

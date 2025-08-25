@@ -51,12 +51,14 @@ class Exam {
             .where('e.id', examId)
             .select(
                 'e.id as exam_id',
+                'e.subject_id ',
                 'e.uuid as exam_uuid',
                 'e.title as exam_title',
                 'e.total_mark',
                 'e.time_limit',
                 'e.passing_mark',
                 'e.announced',
+                'e.exam_type ',
                 'q.id as question_id',
                 'q.question_text',
                 'eq.mark ', // Get mark from pivot table if it's stored there
@@ -80,6 +82,8 @@ class Exam {
                     total_mark: r.total_mark,
                     passing_mark: r.passing_mark,
                     time_limit: r.time_limit,
+                    exam_type:r.exam_type,
+                    subject_id:r.subject_id,
                     questions: [],
                 };
             }

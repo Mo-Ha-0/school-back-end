@@ -3,11 +3,11 @@ module.exports = {
     development: {
         client: 'pg',
         connection: {
-            host: 'dpg-d2m5ndf5r7bs73ecdru0-a.oregon-postgres.render.com',
+            host: process.env.DB_HOST,
             port: 5432,
-            user: 'mohammad',
+            user: process.env.DB_USER,
             password: process.env.DB_PASS,
-            database: 'school_n38e',
+            database: process.env.DB_NAME,
         },
     },
     production: {

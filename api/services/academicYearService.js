@@ -79,6 +79,11 @@ module.exports = {
         return await academic_year.findAll();
     },
 
+    
+    async findAllAccordingYearNow() {
+        return await academic_year.findAllAccordingYearNow();
+    },
+
     async updateAcademicYear(id, updates) {
         return await academic_year.update(id, updates);
     },

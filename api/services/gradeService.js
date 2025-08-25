@@ -1,8 +1,8 @@
 const  Grade= require('../models/Grade');
 
 module.exports = {
-  async createGrade(GradeData) {
-    return await Grade.create(GradeData);
+  async createGrade(GradeData,trx=null) {
+    return await Grade.create(GradeData,trx);
   },
 
   async getGrade(id) {
@@ -11,6 +11,10 @@ module.exports = {
 
   async getAllGradees() {
     return await Grade.findAll();
+  },
+
+  async findAllForStudent(id) {
+    return await Grade.findAllForStudent(id);
   },
 
   async updateGrade(id, updates) {

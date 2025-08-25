@@ -1,12 +1,16 @@
 const studentService = require('../services/studentService');
 const userService = require('../services/userService');
 const roleService = require('../services/roleService');
+const gradeService = require('../services/gradeService');
+const archiveService = require('../services/archiveService');
+const academicYearService = require('../services/academicYearService');
 const ExcelService = require('../services/excelService');
 const { validationResult } = require('express-validator');
 const { db } = require('../../config/db');
 const { toDateOnly } = require('../utils/dateUtils');
 
 const bcrypt = require('bcrypt-nodejs');
+
 module.exports = {
     async createStudent(req, res) {
         const { db } = require('../../config/db');
@@ -453,6 +457,23 @@ module.exports = {
                 error: 'Error processing Excel file',
                 details: error.message,
             });
+        }
+    },
+
+    async getStudentScoreCard(req, res) {
+        try {
+            const student=await studentService.findByUserId(req.user.id);
+            const academic_year = await academicYearService.findAllAccordingYearNow();
+            console.log(student,academic_year);
+            const archive = await archiveService.findByAcademicYearId(academic_year.id,student.id);
+            console.log(archive);
+            const grades = await gradeService.findAllForStudent(archive.id);
+            console.log(grades);
+            if (!grades)
+                return res.status(404).json({ error: 'grades not found' });
+            res.json(grades);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
         }
     },
 };

@@ -9,6 +9,15 @@ class academic_year {
     return await db('academic_years').where({ id }).first();
   }
 
+  static async findAllAccordingYearNow() {
+    const now = new Date();
+     
+    return await db('academic_years')
+      .select('*')
+      .where('start_year', '<=', now)
+      .andWhere('end_year', '>=', now).first();
+  }
+
   static async findAll() {
     return await db('academic_years').select('*') ;
   }

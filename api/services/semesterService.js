@@ -9,6 +9,10 @@ module.exports = {
     return await semester.findById(id);
   },
 
+  async findByAcademicYearId(id) {
+    return await semester.findByAcademicYearId(id);
+  },
+
   async getAllSemesters() {
     return await semester.findAll();
   },

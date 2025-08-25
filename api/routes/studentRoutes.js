@@ -29,6 +29,12 @@ router.get(
     studentController.getAllStudents
 );
 router.get(
+    '/scorecard',
+    authMiddleware,
+    // hasPermission('get_student_scorecard'),
+    studentController.getStudentScoreCard
+);
+router.get(
     '/subjects',
     authMiddleware,
     hasPermission('get_subjects'),

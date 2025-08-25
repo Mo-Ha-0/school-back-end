@@ -12,7 +12,8 @@ function stripSensitive(value) {
             if (
                 key === 'created_at' ||
                 key === 'updated_at' ||
-                key === 'password_hash'
+                key === 'password_hash' ||
+                key === 'student_created_at'
             ) {
                 continue;
             }

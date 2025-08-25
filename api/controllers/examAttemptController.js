@@ -2,6 +2,10 @@ const examAttemptService = require('../services/examAttemptService');
 const examService = require('../services/examService');
 const answerService = require('../services/answerService');
 const studentService = require('../services/studentService');
+const gradeService = require('../services/gradeService');
+const academicYearService = require('../services/academicYearService');
+const archiveService = require('../services/archiveService');
+const semesterService = require('../services/semesterService');
 const { validationResult } = require('express-validator');
 
 module.exports = {
@@ -175,7 +179,23 @@ module.exports = {
                 trx
             );
             
-            // Commit the transaction if everything succeeded
+            const academicYear= await academicYearService.findAllAccordingYearNow();
+            
+            const semester= await semesterService.findByAcademicYearId(academicYear.id);
+            const archive=await  archiveService.findByAcademicYearId(academicYear.id,student.id);
+            console.log(exam)
+            const grade=await gradeService.createGrade({
+                archive_id:archive.id,
+                semester_id:semester.id,
+                subject_id:exam.subject_id,
+                min_score:exam.passing_mark,
+                max_score:exam.total_mark,
+                grade:totalScore,
+                type:exam.exam_type
+            },trx);
+            console.log(academicYear,semester,archive);
+            console.log("grade",grade);
+            // Commit the transaction if everything succeededs
             await trx.commit();
             
             res.json({

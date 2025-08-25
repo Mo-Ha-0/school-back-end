@@ -9,6 +9,10 @@ module.exports = {
         return await Archive.findById(id);
     },
 
+    async findByAcademicYearId(id,student_id) {
+        return await Archive.findByAcademicYearId(id,student_id);
+    },
+
     async getAllArchives() {
         return await Archive.findAll();
     },

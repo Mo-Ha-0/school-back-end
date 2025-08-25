@@ -54,7 +54,7 @@ module.exports = {
             // 4. Return user data (without password)
             let userData = await userService.removeHashedPassword(user);
             let userAll = await userService.removeTimeStamp(userData);
-
+            console.log(user);
             const result = await userService.findUserWithRole(user.id);
             console.log(result);
 
