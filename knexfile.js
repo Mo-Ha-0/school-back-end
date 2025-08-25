@@ -22,6 +22,16 @@ module.exports = {
             database: process.env.DB_NAME || 'school_n38e',
             ssl: { rejectUnauthorized: false },
         },
+        pool: {
+            min: 0,
+            max: 10,
+            acquireTimeoutMillis: 30000,
+            createTimeoutMillis: 30000,
+            destroyTimeoutMillis: 5000,
+            idleTimeoutMillis: 30000,
+            reapIntervalMillis: 1000,
+            createRetryIntervalMillis: 100,
+        },
     },
 
     migrations: {
