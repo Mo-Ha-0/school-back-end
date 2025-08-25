@@ -12,8 +12,14 @@ module.exports = {
     },
     production: {
         client: 'pg',
-        connection:
-            'postgresql://mohammad:MqdoLaFOIDjLJCxwBMJ3D90D4wWGxkLw@dpg-d2m5ndf5r7bs73ecdru0-a/school_n38e?sslmode=require',
+        connection: {
+            host: 'dpg-d2m5ndf5r7bs73ecdru0-a', // Internal hostname
+            port: 5432,
+            user: 'mohammad',
+            password: 'MqdoLaFOIDjLJCxwBMJ3D90D4wWGxkLw',
+            database: 'school_n38e',
+            ssl: false, // No SSL needed for internal connections
+        },
     },
 
     migrations: {
