@@ -1,5 +1,5 @@
 const attendanceStudentsService = require('../services/attendanceStudentsService');
-
+const { toDateOnly } = require('../utils/dateUtils');
 const { validationResult } = require('express-validator');
 
 module.exports = {
@@ -96,7 +96,12 @@ module.exports = {
                 await attendanceStudentsService.getAttendanceByStudentId(
                     studentId
                 );
-            res.json(attendance);
+
+            const formatedAttendance = attendance.map((record) => ({
+                ...record,
+                date: toDateOnly(record.date),
+            }));
+            res.json(formatedAttendance);
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
