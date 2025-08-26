@@ -21,6 +21,7 @@ exports.up = function (knex) {
       .onDelete('CASCADE');
     table.date('date').notNullable();
     table.enum('status', ['present', 'absent', 'late']).notNullable();
+    table.unique(['student_id', 'date']);
   });
 };
 

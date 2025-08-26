@@ -17,7 +17,7 @@ exports.up = function (knex) {
       .references('id')
       .inTable('students')
       .onDelete('CASCADE');
-    table.integer('score').unsigned().nullable().checkPositive();
+    table.integer('score').unsigned().nullable();
     table.timestamps(true, true);
   });
 };

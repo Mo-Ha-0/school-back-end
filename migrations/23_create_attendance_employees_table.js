@@ -20,6 +20,7 @@ exports.up = function (knex) {
       .inTable('users')
       .onDelete('CASCADE');
     table.date('date').notNullable();
+    table.unique(['user_id', 'date']);
     table.enum('status', ['present', 'absent', 'late']).notNullable();
   });
 };
