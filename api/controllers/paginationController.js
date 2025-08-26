@@ -17,6 +17,7 @@ module.exports = {
                 pageSize = 10,
                 orderBy = 'id',
                 orderDirection = 'asc',
+                filters = {},
             } = req.body;
 
             if (!table || !['students', 'teachers', 'users'].includes(table)) {
@@ -183,12 +184,46 @@ module.exports = {
                         'users.birth_date',
                         'classes.class_name',
                         'curriculums.level_grade as curriculum_grade'
-                    )
+                    );
+
+                countQuery = db('students')
+                    .leftJoin('users', 'students.user_id', 'users.id')
+                    .leftJoin('classes', 'students.class_id', 'classes.id')
+                    .leftJoin(
+                        'curriculums',
+                        'students.curriculum_id',
+                        'curriculums.id'
+                    );
+
+                // Apply filters
+                if (filters.grade_level) {
+                    const gradeLevel = parseInt(filters.grade_level);
+                    if (!isNaN(gradeLevel)) {
+                        query = query.where('students.grade_level', gradeLevel);
+                        countQuery = countQuery.where(
+                            'students.grade_level',
+                            gradeLevel
+                        );
+                    }
+                }
+
+                if (filters.class_id) {
+                    const classId = parseInt(filters.class_id);
+                    if (!isNaN(classId)) {
+                        query = query.where('students.class_id', classId);
+                        countQuery = countQuery.where(
+                            'students.class_id',
+                            classId
+                        );
+                    }
+                }
+
+                query = query
                     .orderBy(orderByColumn, orderDirection)
                     .limit(pageSizeNum)
                     .offset((pageNum - 1) * pageSizeNum);
 
-                countQuery = db('students').count('* as total');
+                countQuery = countQuery.count('* as total');
             } else if (table === 'teachers') {
                 query = db('teachers')
                     .leftJoin('users', 'teachers.user_id', 'users.id')
