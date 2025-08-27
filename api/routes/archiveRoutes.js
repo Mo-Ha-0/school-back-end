@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const archiveController = require('../controllers/archiveController');
+const studentController = require('../controllers/studentController');
 const { checkRoles } = require('../../middleware/roleMiddleware');
 const authMiddleware = require('../../middleware/authMiddleware');
 const { archiveValidator } = require('../validators/archiveValidaor');
@@ -18,6 +19,12 @@ router.get(
     authMiddleware,
     hasPermission('get_archives'),
     archiveController.getAllArchives
+);
+router.get(
+    '/scorecard',
+    authMiddleware,
+    // hasPermission('get_student_scorecard'),
+    studentController.getStudentScoreCardFromArchive
 );
 router.get(
     '/:id',

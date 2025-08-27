@@ -86,10 +86,10 @@ class Student {
             .select('su.*');
     }
     static async getStudentArchive(id) {
-        return await db('archives as c')
+        return await db('archives as a')
             .join('students as s', 's.id', 'a.student_id')
             .where('s.id', id) // Changed from where({id:id}) to be more explicit
-            .select('s.*', 'a.*');
+            .select('a.*');
     }
     static async getStudentSchedule(id) {
         const scheduleEntries = await db('schedules as sc')
