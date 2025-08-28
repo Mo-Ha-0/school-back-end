@@ -2,6 +2,7 @@ const examService = require('../services/examService');
 const examQuestionService = require('../services/examQuestionService');
 const { validationResult } = require('express-validator');
 const { db } = require('../../config/db');
+const bcrypt = require('bcrypt');
 
 module.exports = {
     async createExamWithQuestions(req, res) {
@@ -344,7 +345,9 @@ module.exports = {
                 );
 
             if (semesters.length === 0) {
-                return res.status(404).json('There are no valid quizzes for this subject');
+                return res
+                    .status(404)
+                    .json('There are no valid quizzes for this subject');
             }
 
             res.json(semesters);
@@ -387,6 +390,402 @@ module.exports = {
             return res.status(200).json(quizzes);
         } catch (err) {
             console.error(err);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    },
+
+    // Quiz-specific endpoints for public quiz taking
+    async authenticateQuizAccess(req, res) {
+        try {
+            const { email, password, quizId } = req.body;
+
+            if (!email || !password || !quizId) {
+                return res.status(400).json({
+                    error: 'Email, password, and quiz ID are required',
+                });
+            }
+
+            // Find quiz by UUID
+            const quiz = await db('exams')
+                .where({ uuid: quizId, exam_type: 'quiz' })
+                .first();
+
+            if (!quiz) {
+                return res.status(404).json({ error: 'Quiz not found' });
+            }
+
+            // Check if quiz is currently available
+            const now = new Date();
+            const startTime = new Date(quiz.start_datetime);
+            const endTime = new Date(quiz.end_datetime);
+
+            if (now < startTime) {
+                return res.status(400).json({
+                    error: 'Quiz has not started yet',
+                    start_time: quiz.start_datetime,
+                });
+            }
+
+            if (now > endTime) {
+                return res.status(400).json({
+                    error: 'Quiz has ended',
+                    end_time: quiz.end_datetime,
+                });
+            }
+
+            // Validate user credentials
+            const user = await db('users').where({ email }).first();
+
+            if (!user) {
+                return res.status(401).json({ error: 'Invalid credentials' });
+            }
+
+            // In a production environment, you should hash and compare passwords
+            // For now, this is a simplified version - consider implementing proper password hashing
+
+            const isValidPassword = await bcrypt.compare(
+                password,
+                user.password_hash
+            );
+
+            if (!isValidPassword) {
+                return res.status(401).json({ error: 'Invalid credentials' });
+            }
+
+            // Check if user is a student
+            const student = await db('students')
+                .where({ user_id: user.id })
+                .first();
+
+            if (!student) {
+                return res
+                    .status(403)
+                    .json({ error: 'Only students can take quizzes' });
+            }
+
+            // Check if student has already taken this quiz
+            const existingAttempt = await db('exam_attempts')
+                .where({
+                    exam_id: quiz.id,
+                    student_id: student.id,
+                })
+                .first();
+
+            if (existingAttempt) {
+                return res.status(400).json({
+                    error: 'You have already taken this quiz',
+                    score: existingAttempt.score,
+                    completed_at: existingAttempt.updated_at,
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Access granted',
+                quiz: {
+                    id: quiz.id,
+                    uuid: quiz.uuid,
+                    title: quiz.title,
+                    description: quiz.description,
+                    time_limit: quiz.time_limit,
+                    total_mark: quiz.total_mark,
+                },
+                student: {
+                    id: student.id,
+                    user_id: user.id,
+                    name: `${user.first_name} ${user.last_name}`,
+                },
+            });
+        } catch (error) {
+            console.error('Quiz authentication error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    },
+
+    async getQuizData(req, res) {
+        try {
+            const { quizId } = req.params;
+            const { email } = req.query;
+
+            if (!email) {
+                return res.status(400).json({ error: 'Email is required' });
+            }
+
+            // Find quiz by UUID
+            const quiz = await db('exams')
+                .where({ uuid: quizId, exam_type: 'quiz' })
+                .first();
+
+            if (!quiz) {
+                return res.status(404).json({ error: 'Quiz not found' });
+            }
+
+            // Verify user access (basic check)
+            const user = await db('users').where({ email }).first();
+
+            if (!user) {
+                return res.status(401).json({ error: 'Unauthorized access' });
+            }
+
+            // Get quiz questions with options
+            const questionsData = await db('exam_question')
+                .join('questions', 'questions.id', 'exam_question.question_id')
+                .leftJoin('options', 'options.question_id', 'questions.id')
+                .where('exam_question.exam_id', quiz.id)
+                .select(
+                    'questions.id as question_id',
+                    'questions.question_text',
+                    'questions.type',
+                    'options.id as option_id',
+                    'options.text as option_text',
+                    'exam_question.mark'
+                )
+                .orderBy('questions.id')
+                .orderBy('options.id');
+
+            // Group questions and options
+            const questionsMap = {};
+
+            questionsData.forEach((row) => {
+                if (!questionsMap[row.question_id]) {
+                    questionsMap[row.question_id] = {
+                        id: row.question_id,
+                        question: row.question_text,
+                        type: row.type,
+                        mark: row.mark,
+                        options: [],
+                    };
+                }
+
+                if (row.option_id) {
+                    questionsMap[row.question_id].options.push({
+                        id: row.option_id.toString(),
+                        text: row.option_text,
+                    });
+                }
+            });
+
+            const questions = Object.values(questionsMap);
+
+            res.json({
+                id: quiz.uuid,
+                title: quiz.title,
+                description: quiz.description,
+                time_limit: quiz.time_limit,
+                total_mark: quiz.total_mark,
+                questions: questions,
+            });
+        } catch (error) {
+            console.error('Get quiz data error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    },
+
+    async submitQuizAnswers(req, res) {
+        const { db } = require('../../config/db');
+        let trx;
+
+        try {
+            const { quizId } = req.params;
+            const { email, answers } = req.body;
+
+            if (!email || !answers || !Array.isArray(answers)) {
+                return res.status(400).json({
+                    error: 'Email and answers array are required',
+                });
+            }
+
+            trx = await db.transaction();
+
+            // Find quiz
+            const quiz = await db('exams')
+                .where({ uuid: quizId, exam_type: 'quiz' })
+                .first();
+
+            if (!quiz) {
+                await trx.rollback();
+                return res.status(404).json({ error: 'Quiz not found' });
+            }
+
+            // Find user and student
+            const user = await db('users').where({ email }).first();
+
+            if (!user) {
+                await trx.rollback();
+                return res.status(401).json({ error: 'User not found' });
+            }
+
+            const student = await db('students')
+                .where({ user_id: user.id })
+                .first();
+
+            if (!student) {
+                await trx.rollback();
+                return res
+                    .status(403)
+                    .json({ error: 'Student record not found' });
+            }
+
+            // Check if already attempted
+            const existingAttempt = await db('exam_attempts')
+                .where({
+                    exam_id: quiz.id,
+                    student_id: student.id,
+                })
+                .first();
+
+            if (existingAttempt) {
+                await trx.rollback();
+                return res.status(400).json({
+                    error: 'Quiz already submitted',
+                    score: existingAttempt.score,
+                });
+            }
+
+            // Create exam attempt
+            const [examAttempt] = await trx('exam_attempts')
+                .insert({
+                    exam_id: quiz.id,
+                    student_id: student.id,
+                    score: 0, // Will be updated after grading
+                })
+                .returning('*');
+
+            // Get correct answers for grading
+            const correctAnswers = await trx('exam_question')
+                .join('questions', 'questions.id', 'exam_question.question_id')
+                .join('options', 'options.question_id', 'questions.id')
+                .where('exam_question.exam_id', quiz.id)
+                .where('options.is_correct', true)
+                .select(
+                    'questions.id as question_id',
+                    'options.id as correct_option_id',
+                    'exam_question.mark'
+                );
+
+            const correctAnswersMap = {};
+            correctAnswers.forEach((answer) => {
+                correctAnswersMap[answer.question_id] = {
+                    correct_option_id: answer.correct_option_id,
+                    mark: answer.mark,
+                };
+            });
+
+            let totalScore = 0;
+            const results = [];
+
+            // Process each answer
+            for (const answer of answers) {
+                const { questionId, optionId } = answer;
+
+                if (!questionId || !optionId) {
+                    continue;
+                }
+
+                // Check if answer is correct
+                const correctAnswer = correctAnswersMap[questionId];
+                const isCorrect =
+                    correctAnswer &&
+                    correctAnswer.correct_option_id == optionId;
+                const markAwarded = isCorrect ? correctAnswer.mark || 1 : 0;
+
+                // Save the answer with mark_awarded
+                await trx('answers').insert({
+                    question_id: questionId,
+                    exam_attempt_id: examAttempt.id,
+                    option_id: optionId,
+                    mark_awarded: markAwarded,
+                });
+
+                totalScore += markAwarded;
+                results.push({
+                    questionId,
+                    isCorrect,
+                    markAwarded,
+                    correctOptionId: correctAnswer?.correct_option_id,
+                });
+            }
+
+            // Update exam attempt with final score
+            await trx('exam_attempts')
+                .where('id', examAttempt.id)
+                .update({ score: totalScore });
+
+            // Get exam details for grade creation
+            const examDetails = await trx('exams')
+                .join('subjects', 'exams.subject_id', 'subjects.id')
+                .join('semesters', 'exams.semester_id', 'semesters.id')
+                .where('exams.id', quiz.id)
+                .select(
+                    'exams.subject_id',
+                    'exams.semester_id',
+                    'exams.total_mark',
+                    'exams.exam_type'
+                )
+                .first();
+
+            // Get or create archive for the student in current academic year
+            // Find the most recent academic year that includes today's date
+            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+            let currentAcademicYear = await trx('academic_years')
+                .where('start_year', '<=', today)
+                .andWhere('end_year', '>=', today)
+                .orderBy('start_year', 'desc')
+                .first();
+
+            // If no current academic year found, get the most recent one
+            if (!currentAcademicYear) {
+                currentAcademicYear = await trx('academic_years')
+                    .orderBy('start_year', 'desc')
+                    .first();
+            }
+
+            if (currentAcademicYear) {
+                let archive = await trx('archives')
+                    .where({
+                        student_id: student.id,
+                        academic_year_id: currentAcademicYear.id,
+                    })
+                    .first();
+
+                if (!archive) {
+                    // Create archive if it doesn't exist
+                    const [newArchive] = await trx('archives')
+                        .insert({
+                            student_id: student.id,
+                            academic_year_id: currentAcademicYear.id,
+                            remaining_tuition: 0,
+                        })
+                        .returning('*');
+                    archive = newArchive;
+                }
+
+                // Create grade record for the quiz
+                await trx('grades').insert({
+                    archive_id: archive.id,
+                    subject_id: examDetails.subject_id,
+                    semester_id: examDetails.semester_id,
+                    type: examDetails.exam_type,
+                    grade: totalScore,
+                    min_score: 0,
+                    max_score: examDetails.total_mark,
+                });
+            }
+
+            await trx.commit();
+
+            res.json({
+                success: true,
+                totalScore,
+                totalQuestions: results.length,
+                correctAnswers: results.filter((r) => r.isCorrect).length,
+                passed: totalScore >= quiz.passing_mark,
+                passingScore: quiz.passing_mark,
+                results,
+            });
+        } catch (error) {
+            if (trx) await trx.rollback();
+            console.error('Submit quiz error:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
     },

@@ -86,5 +86,12 @@ router.delete(
     examController.deleteExam
 );
 
+// Quiz-specific public routes (no authentication middleware needed)
+router.post('/quiz/authenticate', examController.authenticateQuizAccess);
+
+router.get('/quiz/:quizId/data', examController.getQuizData);
+
+router.post('/quiz/:quizId/submit', examController.submitQuizAnswers);
+
 //authMiddleware,checkRoles(['admin']),
 module.exports = router;

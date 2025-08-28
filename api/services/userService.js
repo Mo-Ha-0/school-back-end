@@ -16,10 +16,16 @@ module.exports = {
     },
 
     async removeHashedPassword(user) {
+        if (!user) {
+            return {};
+        }
         const { password_hash, ...userData } = user;
         return userData;
     },
     async removeTimeStamp(user) {
+        if (!user) {
+            return {};
+        }
         const { created_at, updated_at, ...userData } = user;
         return userData;
     },

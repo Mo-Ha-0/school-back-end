@@ -63,11 +63,17 @@ module.exports = {
 
             if (result.role == 'student') {
                 const student = await studentService.findByUserId(user.id);
-                let studentData = await userService.removeTimeStamp(student);
-                userAll = { ...userAll, ...studentData };
+                if (student) {
+                    let studentData = await userService.removeTimeStamp(
+                        student
+                    );
+                    userAll = { ...userAll, ...studentData };
+                }
             } else if (result.role == 'teacher') {
                 const teacher = await teacherService.findByUserId(user.id);
-                userAll = { ...userAll, ...teacher };
+                if (teacher) {
+                    userAll = { ...userAll, ...teacher };
+                }
             }
             res.json({ user: userAll, token });
         } catch (err) {
