@@ -28,6 +28,21 @@ router.get(
     hasPermission('get_students'),
     studentController.getAllStudents
 );
+
+// Search routes
+router.get(
+    '/search',
+    authMiddleware,
+    hasPermission('get_students'),
+    studentController.searchStudents
+);
+
+router.get(
+    '/search/advanced',
+    authMiddleware,
+    hasPermission('get_students'),
+    studentController.searchStudentsAdvanced
+);
 router.get(
     '/scorecard',
     authMiddleware,

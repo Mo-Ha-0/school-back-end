@@ -38,11 +38,15 @@ module.exports = {
     async sendWhatsAppMessage(to, body) {
         console.log(process.env.ULTRA_MSG_API_URL);
         try {
-            const response = await axios.post(process.env.ULTRA_MSG_API_URL, {
-                token: process.env.ULTRA_MSG_TOKEN,
-                to: to,
-                body: body,
-            });
+            const response = await axios.post(
+                `${process.env.ULTRA_MSG_API_URL}/messages/chat`,
+                {
+                    token: process.env.ULTRA_MSG_TOKEN,
+                    to: to,
+                    body: body,
+                }
+            );
+            console.log(response.data);
             return response.data;
         } catch (error) {
             console.error(

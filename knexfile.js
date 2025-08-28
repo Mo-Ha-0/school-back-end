@@ -13,12 +13,12 @@ module.exports = {
     production: {
         client: 'pg',
         connection: {
-            host: 'dpg-d2m5ndf5r7bs73ecdru0-a', // Internal hostname
+            host: process.env.DB_HOST,
             port: 5432,
-            user: 'mohammad',
-            password: 'MqdoLaFOIDjLJCxwBMJ3D90D4wWGxkLw',
-            database: 'school_n38e',
-            ssl: false, // No SSL needed for internal connections
+            user: process.env.DB_USER,
+            password: process.env.DB_PASS,
+            database: process.env.DB_NAME,
+            ssl: false,
         },
     },
 
