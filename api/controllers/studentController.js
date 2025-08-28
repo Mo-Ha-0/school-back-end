@@ -8,6 +8,7 @@ const ExcelService = require('../services/excelService');
 const { validationResult } = require('express-validator');
 const { db } = require('../../config/db');
 const { toDateOnly } = require('../utils/dateUtils');
+const { stripSensitive } = require('../utils/sanitize');
 
 const bcrypt = require('bcrypt-nodejs');
 
@@ -208,13 +209,14 @@ module.exports = {
     },
     async getStudentArchive(req, res) {
         try {
-            const studentExists = await studentService.getStudent(req.body.id);
+            const {student_id}=req.body;
+            const studentExists = await studentService.getStudent(student_id);
             if (!studentExists)
                 return res.status(404).json({ error: 'student not found' });
-            const archive = await studentService.getStudentArchive(req.body.id);
+            const archive = await studentService.getStudentArchive(student_id);
             if (!archive)
                 return res.status(404).json({ error: 'archive not found' });
-            res.json(archive);
+            res.json(stripSensitive(archive));
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
@@ -468,6 +470,19 @@ module.exports = {
             const archive = await archiveService.findByAcademicYearId(academic_year.id,student.id);
             console.log(archive);
             const grades = await gradeService.findAllForStudent(archive.id);
+            console.log(grades);
+            if (!grades)
+                return res.status(404).json({ error: 'grades not found' });
+            res.json(grades);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    },
+    async getStudentScoreCardFromArchive(req, res) {
+        try {
+            const {archive_id}=req.body;
+            // const student=await studentService.findByUserId(req.user.id);          
+            const grades = await gradeService.findAllForStudent(archive_id);
             console.log(grades);
             if (!grades)
                 return res.status(404).json({ error: 'grades not found' });
