@@ -1,25 +1,31 @@
-const  AttendancEmployees= require('../models/AttendancEmployees');
+const AttendanceEmployees = require('../models/AttendancEmployees');
 
 module.exports = {
-  async createAttendancEmployees(AttendancEmployeesData) {
-    return await AttendancEmployees.create(AttendancEmployeesData);
-  },
+    async createAttendanceEmployees(AttendanceEmployeesData) {
+        return await AttendanceEmployees.create(AttendanceEmployeesData);
+    },
 
-  async getAttendancEmployees(id) {
-    return await AttendancEmployees.findById(id);
-  },
+    async getAttendanceEmployees(id) {
+        return await AttendanceEmployees.findById(id);
+    },
 
-  async getAllAttendancEmployees() {
-    return await AttendancEmployees.findAll();
-  },
+    async getAllAttendanceEmployees() {
+        return await AttendanceEmployees.findAll();
+    },
 
-  async updateAttendancEmployees(id, updates) {
-    return await AttendancEmployees.update(id, updates);
-  },
+    async updateAttendanceEmployees(id, updates) {
+        return await AttendanceEmployees.update(id, updates);
+    },
 
-  async deleteAttendancEmployees(id) {
-    return await AttendancEmployees.delete(id);
-  },
+    async deleteAttendanceEmployees(id) {
+        return await AttendanceEmployees.delete(id);
+    },
 
- 
+    async getAttendanceEmployeesByDate(date) {
+        return await AttendanceEmployees.findByDate(date);
+    },
+
+    async getAttendanceByEmployeeId(employeeId) {
+        return await AttendanceEmployees.findByEmployeeId(employeeId);
+    },
 };

@@ -1,9 +1,9 @@
-const attendanceEmployeesService = require('../services/attendanceEmployeesService');
+const attendanceTeachersService = require('../services/attendanceTeachersService');
 const { toDateOnly } = require('../utils/dateUtils');
 const { validationResult } = require('express-validator');
 
 module.exports = {
-    async createAttendanceEmployees(req, res) {
+    async createAttendanceTeachers(req, res) {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
@@ -12,11 +12,11 @@ module.exports = {
             let { date, attendance } = req.body;
             const created_by = req.user.id; // Get the authenticated user's ID
 
-            const attendance_employees =
-                await attendanceEmployeesService.getAttendanceEmployeesByDate(
+            const attendance_teachers =
+                await attendanceTeachersService.getAttendanceTeachersByDate(
                     date
                 );
-            if (attendance_employees.length > 0) {
+            if (attendance_teachers.length > 0) {
                 return res
                     .status(400)
                     .json({ error: 'Attendance already exists' });
@@ -29,81 +29,81 @@ module.exports = {
             }));
             console.log(transformedAttendance);
 
-            const AttendanceEmployees =
-                await attendanceEmployeesService.createAttendanceEmployees(
+            const AttendanceTeachers =
+                await attendanceTeachersService.createAttendanceTeachers(
                     transformedAttendance
                 );
-            res.status(201).json({ attendance: AttendanceEmployees });
+            res.status(201).json({ attendance: AttendanceTeachers });
         } catch (error) {
             res.status(400).json({ error: error.message });
         }
     },
 
-    async getAttendanceEmployees(req, res) {
+    async getAttendanceTeachers(req, res) {
         try {
-            const AttendanceEmployees =
-                await attendanceEmployeesService.getAttendanceEmployees(
+            const AttendanceTeachers =
+                await attendanceTeachersService.getAttendanceTeachers(
                     req.params.id
                 );
-            if (!AttendanceEmployees)
+            if (!AttendanceTeachers)
                 return res
                     .status(404)
-                    .json({ error: 'Attendance Employees not found' });
-            res.json(AttendanceEmployees);
+                    .json({ error: 'Attendance Teachers not found' });
+            res.json(AttendanceTeachers);
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
     },
 
-    async getAllAttendanceEmployees(req, res) {
+    async getAllAttendanceTeachers(req, res) {
         try {
-            const AttendanceEmployees =
-                await attendanceEmployeesService.getAllAttendanceEmployees();
-            res.json(AttendanceEmployees);
+            const AttendanceTeachers =
+                await attendanceTeachersService.getAllAttendanceTeachers();
+            res.json(AttendanceTeachers);
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
     },
 
-    async updateAttendanceEmployees(req, res) {
+    async updateAttendanceTeachers(req, res) {
         try {
-            const AttendanceEmployees =
-                await attendanceEmployeesService.updateAttendanceEmployees(
+            const AttendanceTeachers =
+                await attendanceTeachersService.updateAttendanceTeachers(
                     req.params.id,
                     req.body
                 );
-            if (!AttendanceEmployees || AttendanceEmployees.length == 0)
+            if (!AttendanceTeachers || AttendanceTeachers.length == 0)
                 return res
                     .status(404)
-                    .json({ error: 'AttendanceEmployees not found' });
-            res.json(AttendanceEmployees);
+                    .json({ error: 'AttendanceTeachers not found' });
+            res.json(AttendanceTeachers);
         } catch (error) {
             res.status(400).json({ error: error.message });
         }
     },
 
-    async deleteAttendanceEmployees(req, res) {
+    async deleteAttendanceTeachers(req, res) {
         try {
             const result =
-                await attendanceEmployeesService.deleteAttendanceEmployees(
+                await attendanceTeachersService.deleteAttendanceTeachers(
                     req.params.id
                 );
             if (!result)
                 return res
                     .status(404)
-                    .json({ error: 'Attendance Employees not found' });
+                    .json({ error: 'Attendance Teachers not found' });
             res.status(200).json({ message: 'deleted successfuly' });
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
     },
 
-    async getAttendanceByEmployeeId(req, res) {
+    async getAttendanceByTeacherId(req, res) {
         try {
-            const { employeeId } = req.params;
+            const { teacherId } = req.params;
             const attendance =
-                await attendanceEmployeesService.getAttendanceByEmployeeId(
-                    employeeId
+                await attendanceTeachersService.getAttendanceByTeacherId(
+                    teacherId
                 );
 
             const formatedAttendance = attendance.map((record) => ({

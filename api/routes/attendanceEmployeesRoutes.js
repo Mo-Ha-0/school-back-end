@@ -27,6 +27,12 @@ router.get(
     hasPermission('get_employees_attendance'),
     attendanceEmployeesController.getAttendanceEmployees
 );
+router.get(
+    '/employee/:employeeId',
+    authMiddleware,
+    hasPermission('get_employees_attendance'),
+    attendanceEmployeesController.getAttendanceByEmployeeId
+);
 router.put(
     '/:id',
     authMiddleware,

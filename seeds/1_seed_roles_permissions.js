@@ -49,6 +49,12 @@ exports.seed = async function (knex) {
         { name: 'update_students_attendance' },
         { name: 'delete_students_attendance' },
 
+        // Attendance - Teachers
+        { name: 'create_teachers_attendance' },
+        { name: 'get_teachers_attendance' },
+        { name: 'update_teachers_attendance' },
+        { name: 'delete_teachers_attendance' },
+
         // Behavior
         { name: 'create_behavior' },
         { name: 'get_behaviors' },
@@ -178,7 +184,6 @@ exports.seed = async function (knex) {
         { name: 'get_grade' },
         { name: 'update_grade' },
         { name: 'delete_grade' },
-          
     ];
 
     const permissions = await knex('permissions')

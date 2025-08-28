@@ -26,6 +26,10 @@ class AttendanceStudents {
         return await db('attendance_students').where({ id }).del();
     }
 
+    static async findByDate(date) {
+        return await db('attendance_students').where({ date }).select('*');
+    }
+
     static async findByStudentId(studentId) {
         return await db('attendance_students')
             .where({ student_id: studentId })

@@ -21,6 +21,10 @@ module.exports = {
         return await AttendanceStudents.delete(id);
     },
 
+    async getAttendanceStudentsByDate(date) {
+        return await AttendanceStudents.findByDate(date);
+    },
+
     async getAttendanceByStudentId(studentId) {
         return await AttendanceStudents.findByStudentId(studentId);
     },
