@@ -10,7 +10,7 @@ exports.seed = async function (knex) {
     await knex('students').del();
     await knex('teachers').del();
     await knex('classes').del();
-    await knex('users').del();
+    // await knex('users').del();
 
     console.log('Seeding users...');
     const users = [];
