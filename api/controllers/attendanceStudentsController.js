@@ -12,6 +12,15 @@ module.exports = {
             let { date, attendance } = req.body;
             const created_by = req.user.id; // Get the authenticated user's ID
 
+            const attendance_students =
+                await attendanceStudentsService.getAttendanceStudentsByDate(
+                    date
+                );
+            if (attendance_students.length > 0) {
+                return res
+                    .status(400)
+                    .json({ error: 'Attendance already exists' });
+            }
             // Transform the attendance data to include date and created_by
             const transformedAttendance = attendance.map((record) => ({
                 ...record,
