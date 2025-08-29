@@ -10,33 +10,36 @@ router.post(
     '/',
     gradeValidator,
     authMiddleware,
-    hasPermission('create_grade'),
+    hasPermission('manage_grades'),
     gradeController.createGrade
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_grades'),
+    // hasPermission('get_grades'),
     gradeController.getAllGrades
 );
+
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_grade'),
+    hasPermission('manage_grades'),
     gradeController.getGrade
 );
+
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_grade'),
+    hasPermission('manage_grades'),
     gradeController.updateGrade
 );
+
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_grade'),
+    hasPermission('manage_grades'),
     gradeController.deleteGrade
 );
 
-//authMiddleware,checkRoles(['admin']),
 module.exports = router;

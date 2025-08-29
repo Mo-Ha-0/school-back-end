@@ -10,41 +10,41 @@ router.post(
     '/',
     subjectValidator,
     authMiddleware,
-    hasPermission('create_subject'),
+    hasPermission('manage_subjects'),
     subjectController.createSubject
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_subjects'),
+    hasPermission('manage_subjects'),
     subjectController.getAllSubjectes
 );
 
 router.get(
     '/list',
     authMiddleware,
-    hasPermission('get_subjects'),
+    // hasPermission('get_subjects'),
     subjectController.getSubjectsList
 );
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_subjects'),
+    // hasPermission('manage_subjects'),
     subjectController.getSubject
 );
 router.put(
     '/:id',
     subjectValidator,
     authMiddleware,
-    hasPermission('update_subject'),
+    hasPermission('manage_subjects'),
     subjectController.updateSubject
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_subject'),
+    hasPermission('manage_subjects'),
     subjectController.deleteSubject
 );
 
-//,subjectValidator,authMiddleware,checkRoles(['admin'])
 module.exports = router;

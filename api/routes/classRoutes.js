@@ -10,64 +10,64 @@ router.post(
     '/',
     classValidator,
     authMiddleware,
-    hasPermission('create_calss'),
+    hasPermission('manage_classes'),
     classController.createClass
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_classes'),
+    // hasPermission('get_classes'),
     classController.getAllClasses
 );
 
 router.get(
     '/students',
     authMiddleware,
-    hasPermission('get_students'),
+    hasPermission('manage_students'),
     classController.getStudentsInClass
 );
 router.get(
     '/grade_group',
     authMiddleware,
-    hasPermission('get_classes'),
+    hasPermission('manage_classes'),
     classController.getClassesGroupedByGrade
 );
 router.get(
     '/schedule',
     authMiddleware,
-    hasPermission('get_schedules'),
+    hasPermission('manage_schedules'),
     classController.getClassSchedule
 );
 router.get(
     '/subjects-with-teachers/:id',
     authMiddleware,
-    hasPermission('create_schedule', 'update_schedule'),
+    hasPermission('manage_schedules'),
     classController.getClassSubjectsWithTeachers
 );
 
 router.get(
     '/:id/can-delete',
     authMiddleware,
-    hasPermission('delete_class'),
+    hasPermission('manage_classes'),
     classController.canDeleteClass
 );
 
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_classes'),
+    hasPermission('manage_classes'),
     classController.getClass
 );
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_class'),
+    hasPermission('manage_classes'),
     classController.updateClass
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_class'),
+    hasPermission('manage_classes'),
     classController.deleteClass
 );
 

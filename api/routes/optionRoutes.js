@@ -10,31 +10,31 @@ router.post(
     '/',
     optionValidator,
     authMiddleware,
-    hasPermission('create_option'),
+    hasPermission('manage_questions'),
     optionController.createOption
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_options'),
+    hasPermission('manage_questions'),
     optionController.getAllOptions
 );
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_options'),
+    hasPermission('manage_questions'),
     optionController.getOption
 );
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_option'),
+    hasPermission('manage_questions'),
     optionController.updateOption
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_option'),
+    hasPermission('manage_questions'),
     optionController.deleteOption
 );
 

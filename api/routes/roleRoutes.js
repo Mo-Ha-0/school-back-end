@@ -9,48 +9,49 @@ router.post(
     '/',
     roleValidator,
     authMiddleware,
-    hasPermission('create_role'),
+    hasPermission('manage_roles'),
     roleController.createRole
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_roles'),
+    hasPermission('manage_roles'),
     roleController.getAllRoles
 );
 
 router.get(
     '/employees',
     authMiddleware,
-    hasPermission('get_roles'),
+    hasPermission('manage_roles'),
     roleController.getAllEmployeesRoles
 );
 
 router.put(
     '/update-role',
     authMiddleware,
-    hasPermission('update_role'),
+    hasPermission('manage_roles'),
     roleController.updatePermissions
 );
 
 router.get(
     '/:roleId/permissions',
     authMiddleware,
-    hasPermission('get_permissions'),
+    hasPermission('manage_roles'),
     roleController.getRolePermissions
 );
 
 router.put(
     '/:roleId',
     authMiddleware,
-    hasPermission('update_role'),
+    hasPermission('manage_roles'),
     roleController.updateRoleName
 );
 
 router.delete(
     '/:roleId',
     authMiddleware,
-    hasPermission('delete_role'),
+    hasPermission('manage_roles'),
     roleController.deleteRole
 );
 

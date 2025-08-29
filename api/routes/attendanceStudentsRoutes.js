@@ -12,41 +12,39 @@ router.post(
     '/',
     attendanceStudentsValidator,
     authMiddleware,
-    hasPermission('create_students_attendance'),
+    hasPermission('manage_student_attendance'),
     attendanceStudentsController.createAttendanceStudents
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_students_attendance'),
+    hasPermission('manage_student_attendance'),
     attendanceStudentsController.getAllAttendanceStudents
 );
-
 router.get(
     '/student/:studentId',
     authMiddleware,
-    hasPermission('get_students_attendance'),
+    // hasPermission('get_students_attendance'),
     attendanceStudentsController.getAttendanceByStudentId
 );
 
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_students_attendance'),
+    hasPermission('manage_student_attendance'),
     attendanceStudentsController.getAttendanceStudents
 );
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_students_attendance'),
+    hasPermission('manage_student_attendance'),
     attendanceStudentsController.updateAttendanceStudents
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_students_attendance'),
+    hasPermission('manage_student_attendance'),
     attendanceStudentsController.deleteAttendanceStudents
 );
 
-//authMiddleware,checkRoles(['admin']),
 module.exports = router;

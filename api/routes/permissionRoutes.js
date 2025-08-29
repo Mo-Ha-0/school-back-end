@@ -10,13 +10,14 @@ router.post(
     '/',
     permissionValidator,
     authMiddleware,
-    hasPermission('create_permission'),
+    hasPermission('manage_permissions'),
     permissionController.createPermission
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_permissions'),
+    // hasPermission('manage_permissions'),
     permissionController.getAllPermissions
 );
 

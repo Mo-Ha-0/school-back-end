@@ -9,7 +9,7 @@ router.post(
     '/',
     paginationValidator,
     authMiddleware,
-    hasPermission('get_students'),
+    hasPermission('manage_students'),
     paginationController.paginateTable
 );
 

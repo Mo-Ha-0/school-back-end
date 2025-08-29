@@ -11,40 +11,43 @@ router.post(
     '/',
     examAttemptValidator,
     authMiddleware,
-    // hasPermission('create_exam_attempt'),
+    hasPermission('manage_exam_attempts'),
     examAttemptController.createExamAttempt
 );
+
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('get_exam_attempts'),
+    // hasPermission('manage_exam_attempts'),
     examAttemptController.getAllExamAttempts
 );
+
 router.get(
     '/check',
     authMiddleware,
-    // hasPermission('grade_exam'),
     examCorrectValidator,
     examAttemptController.gradeExam
 );
+
 router.get(
     '/:id',
     authMiddleware,
-    // hasPermission('get_exam_attempts'),
+    hasPermission('manage_exam_attempts'),
     examAttemptController.getAllExamAttempts
 );
+
 router.put(
     '/:id',
     authMiddleware,
-    // hasPermission('update_exam_attempt'),
+    hasPermission('manage_exam_attempts'),
     examAttemptController.updateExamAttempt
 );
+
 router.delete(
     '/:id',
     authMiddleware,
-    // hasPermission('delete_exam_attempt'),
+    hasPermission('manage_exam_attempts'),
     examAttemptController.deleteExamAttempt
 );
 
-//authMiddleware,checkRoles(['admin']),
 module.exports = router;

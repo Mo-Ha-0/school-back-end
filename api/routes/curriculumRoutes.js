@@ -10,33 +10,36 @@ router.post(
     '/',
     curriculumValidator,
     authMiddleware,
-    hasPermission('create_curriculum'),
+    hasPermission('manage_curriculums'),
     curriculumController.createCurriculum
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_curriculums'),
+    hasPermission('manage_curriculums'),
     curriculumController.getAllCurriculums
 );
+
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_curriculums'),
+    // hasPermission('manage_curriculums'),
     curriculumController.getCurriculum
 );
+
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_curriculum'),
+    hasPermission('manage_curriculums'),
     curriculumController.updateCurriculum
 );
+
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_curriculum'),
+    hasPermission('manage_curriculums'),
     curriculumController.deleteCurriculum
 );
 
-//authMiddleware,checkRoles(['admin']),
 module.exports = router;

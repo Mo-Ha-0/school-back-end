@@ -10,33 +10,36 @@ router.post(
     '/',
     answerValidator,
     authMiddleware,
-    hasPermission('create_answer'),
+    hasPermission('manage_questions'),
     answerController.createAnswer
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_answers'),
+    // hasPermission('manage_questions'),
     answerController.getAllAnswers
 );
+
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_answers'),
+    // hasPermission('manage_questions'),
     answerController.getAnswer
 );
+
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_answer'),
+    hasPermission('manage_questions'),
     answerController.updateAnswer
 );
+
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_answer'),
+    hasPermission('manage_questions'),
     answerController.deleteAnswer
 );
 
-//authMiddleware,checkRoles(['admin']),
 module.exports = router;

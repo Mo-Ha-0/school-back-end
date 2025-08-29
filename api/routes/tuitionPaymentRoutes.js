@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const tuitionPaymentController = require('../controllers/tuitionPaymentController');
+const { checkRoles } = require('../../middleware/roleMiddleware');
+const authMiddleware = require('../../middleware/authMiddleware');
 const {
     createTuitionPaymentValidation,
     updateTuitionPaymentValidation,
@@ -15,15 +17,12 @@ const {
 } = require('../validators/tuitionPaymentValidator');
 
 const hasPermission = require('../../middleware/hasPermission');
-const authMiddleware = require('../../middleware/authMiddleware');
 
-router.use(authMiddleware);
-
-// Create a new tuition payment
 router.post(
     '/',
     createTuitionPaymentValidation,
-    hasPermission('create_tuition_payment'),
+    authMiddleware,
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.createTuitionPayment
 );
 
@@ -31,15 +30,15 @@ router.post(
 router.post(
     '/bulk',
     bulkCreatePaymentsValidation,
-    hasPermission('create_tuition_payment'),
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.bulkCreatePayments
 );
 
 // Get all tuition payments with optional filters
 router.get(
     '/',
-    getAllPaymentsValidation,
-    hasPermission('get_tuition_payments'),
+    authMiddleware,
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getAllTuitionPayments
 );
 
@@ -47,7 +46,7 @@ router.get(
 router.get(
     '/stats',
     paymentStatsValidation,
-    hasPermission('get_tuition_payments'),
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getPaymentStats
 );
 
@@ -55,30 +54,29 @@ router.get(
 router.get(
     '/date-range',
     dateRangeValidation,
-    hasPermission('get_tuition_payments'),
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getPaymentsByDateRange
 );
 
 // Get outstanding payments
 router.post(
     '/outstanding',
-    hasPermission('get_tuition_payments'),
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getOutstandingPayments
 );
 
 // Get a specific tuition payment by ID
 router.get(
     '/:id',
-    getPaymentValidation,
-    hasPermission('get_tuition_payments'),
+    authMiddleware,
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getTuitionPayment
 );
 
-// Update a tuition payment
 router.put(
     '/:id',
-    updateTuitionPaymentValidation,
-    hasPermission('update_tuition_payment'),
+    authMiddleware,
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.updateTuitionPayment
 );
 
@@ -86,23 +84,22 @@ router.put(
 router.patch(
     '/:id/verify',
     verifyPaymentValidation,
-    hasPermission('update_tuition_payment'),
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.verifyPayment
 );
 
 // Delete a tuition payment
 router.delete(
     '/:id',
-    getPaymentValidation,
-    hasPermission('delete_tuition_payment'),
+    authMiddleware,
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.deleteTuitionPayment
 );
 
-// Get payments for a specific student
 router.get(
     '/student/:student_id',
     getStudentPaymentsValidation,
-    hasPermission('get_tuition_payments'),
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getStudentPayments
 );
 
@@ -110,7 +107,7 @@ router.get(
 router.get(
     '/student/:student_id/total',
     getStudentPaymentsValidation,
-    hasPermission('get_tuition_payments'),
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getStudentPaymentTotal
 );
 
@@ -118,7 +115,7 @@ router.get(
 router.get(
     '/student/:student_id/balance',
     getStudentPaymentsValidation,
-    hasPermission('get_tuition_payments'),
+    hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getStudentBalance
 );
 

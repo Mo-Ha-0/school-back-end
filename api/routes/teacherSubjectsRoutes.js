@@ -11,31 +11,31 @@ router.post(
     '/',
     teacherSubjectsValidator,
     authMiddleware,
-    hasPermission('create_teachers_subjects'),
+    // hasPermission('create_teachers_subjects'),
     teacherSubectsController.createTeachersSubects
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_subjects'),
+    // hasPermission('get_subjects'),
     teacherSubectsController.getAllTeachersSubectss
 );
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_subjects'),
+    // hasPermission('get_subjects'),
     teacherSubectsController.getTeachersSubects
 );
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_teacher'),
+    // hasPermission('update_teacher'),
     teacherSubectsController.updateTeachersSubects
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_teacher'),
+    // hasPermission('delete_teacher'),
     teacherSubectsController.deleteTeachersSubects
 );
 

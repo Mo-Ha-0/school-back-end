@@ -9,33 +9,36 @@ const hasPermission = require('../../middleware/hasPermission');
 router.post(
     '/',
     authMiddleware,
-    hasPermission('create_exam_question'),
+    hasPermission('manage_exams'),
     examQuestionController.createExamQuestion
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_exam_questions'),
+    // hasPermission('manage_exams'),
     examQuestionController.getAllExamQuestions
 );
+
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_exam_questions'),
+    // hasPermission('manage_exams'),
     examQuestionController.getExamQuestion
 );
+
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_exam_question'),
+    hasPermission('manage_exams'),
     examQuestionController.updateExamQuestion
 );
+
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_exam_question'),
+    hasPermission('manage_exams'),
     examQuestionController.deleteExamQuestion
 );
 
-//authMiddleware,checkRoles(['admin']),
 module.exports = router;

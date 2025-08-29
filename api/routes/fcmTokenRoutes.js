@@ -10,15 +10,17 @@ router.post(
     '/register',
     fcmTokenValidator,
     authMiddleware,
-    // hasPermission('create_fcm_token'),
+    hasPermission('manage_fcm_tokens'),
     fcmTokenController.createFcmToken
 );
+
 router.get(
     '/sendMessage',
     authMiddleware,
     // hasPermission('send_message'),
     fcmTokenController.sendMessage
 );
+
 router.get(
     '/',
     authMiddleware,
@@ -29,19 +31,21 @@ router.get(
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_fcm_tokens'),
+    hasPermission('manage_fcm_tokens'),
     fcmTokenController.getFcmToken
 );
+
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_fcm_token'),
+    hasPermission('manage_fcm_tokens'),
     fcmTokenController.updateFcmToken
 );
+
 router.delete(
     '/:id',
     authMiddleware,
-    // hasPermission('delete_fcm_token'),
+    hasPermission('manage_fcm_tokens'),
     fcmTokenController.deleteFcmToken
 );
 

@@ -11,21 +11,21 @@ router.post(
     '/',
     studentValidator,
     authMiddleware,
-    hasPermission('create_student'),
+    hasPermission('manage_students'),
     studentController.createStudent
 );
 
 router.post(
     '/bulk-upload',
     authMiddleware,
-    hasPermission('create_student'),
+    hasPermission('manage_students'),
     uploadMiddleware,
     studentController.createStudentsFromExcel
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_students'),
+    hasPermission('manage_students'),
     studentController.getAllStudents
 );
 
@@ -33,80 +33,80 @@ router.get(
 router.get(
     '/search',
     authMiddleware,
-    hasPermission('get_students'),
+    hasPermission('manage_students'),
     studentController.searchStudents
 );
 
 router.post(
     '/search/advanced',
     authMiddleware,
-    hasPermission('get_students'),
+    hasPermission('manage_students'),
     studentController.searchStudentsAdvanced
 );
 router.get(
     '/scorecard',
     authMiddleware,
-    // hasPermission('get_student_scorecard'),
+    hasPermission('view_student_profiles'),
     studentController.getStudentScoreCard
 );
 router.get(
     '/subjects',
     authMiddleware,
-    hasPermission('get_subjects'),
+    hasPermission('manage_subjects'),
     studentController.getStudentSubjects
 );
 router.get(
     '/subjects-list',
     authMiddleware,
-    hasPermission('get_subjects'),
+    hasPermission('manage_subjects'),
     studentController.getStudentSubjectsNameList
 );
 
 router.get(
     '/class/:classId',
     authMiddleware,
-    hasPermission('get_students'),
+    hasPermission('manage_students'),
     studentController.getStudentsByClass
 );
 
 router.get(
     '/class',
     authMiddleware,
-    hasPermission('get_classes'),
+    hasPermission('manage_classes'),
     studentController.getClass
 );
 
 router.get(
     '/schedule',
     authMiddleware,
-    hasPermission('get_schedules'),
+    hasPermission('manage_schedules'),
     studentController.getStudentSchedule
 );
 
 router.get(
     '/archive',
     authMiddleware,
-    hasPermission('get_archives'),
+    hasPermission('manage_student_archives'),
     studentController.getStudentArchive
 );
 
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_students'),
+    hasPermission('manage_students'),
     studentController.getStudent
 );
 
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_student'),
+    hasPermission('manage_students'),
     studentController.updateStudent
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_student'),
+    hasPermission('manage_students'),
     studentController.deleteStudent
 );
 

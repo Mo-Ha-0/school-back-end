@@ -12,31 +12,32 @@ router.post(
     '/',
     UserValidator,
     authMiddleware,
-    hasPermission('create_user'),
+    hasPermission('manage_users'),
     userController.createUser
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_users'),
+    // hasPermission('get_users'),
     userController.getAllUsers
 );
 router.get(
     '/employees',
     authMiddleware,
-    hasPermission('get_users'),
+    hasPermission('manage_users'),
     userController.getEmployees
 );
 router.get(
     '/search/:name',
     authMiddleware,
-    hasPermission('get_users'),
+    hasPermission('manage_users'),
     userController.search
 );
 router.get(
     '/paginate',
     authMiddleware,
-    hasPermission('get_users'),
+    hasPermission('manage_users'),
     userController.paginate
 );
 
@@ -45,19 +46,21 @@ router.get('/current-user', authMiddleware, userController.getUserByToken);
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_users'),
+    hasPermission('manage_users'),
     userController.getUser
 );
+
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_user'),
+    hasPermission('manage_users'),
     userController.updateUser
 );
+
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_user'),
+    hasPermission('manage_users'),
     userController.deleteUser
 );
 

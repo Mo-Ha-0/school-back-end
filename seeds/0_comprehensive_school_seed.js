@@ -79,228 +79,60 @@ exports.seed = async function (knex) {
             accountantRole,
         ] = roles;
 
-        // Create comprehensive permissions for all API endpoints
+        // Create consolidated permissions for all API endpoints
         const permissionsList = [
-            // Academic Years
-            { name: 'create_academic_year' },
-            { name: 'get_academic_years' },
-            { name: 'get_academic_year' },
-            { name: 'update_academic_year' },
-            { name: 'delete_academic_year' },
+            // Academic Management
+            { name: 'manage_academic_years' }, // create, read, update, delete academic years
+            { name: 'manage_semesters' }, // create, read, update, delete semesters
+            { name: 'manage_curriculums' }, // create, read, update, delete curriculums
+            { name: 'manage_subjects' }, // create, read, update, delete subjects
+            { name: 'manage_classes' }, // create, read, update, delete classes
 
-            // Answers
-            { name: 'create_answer' },
-            { name: 'get_answers' },
-            { name: 'get_answer' },
-            { name: 'update_answer' },
-            { name: 'delete_answer' },
+            // Student Management
+            { name: 'manage_students' }, // create, read, update, delete students
+            { name: 'view_student_profiles' }, // get student profiles, grades, exams
+            { name: 'manage_student_archives' }, // create, read, update, delete archives
 
-            // Archives
-            { name: 'create_archive' },
-            { name: 'get_archives' },
-            { name: 'get_archive' },
-            { name: 'update_archive' },
-            { name: 'delete_archive' },
-            { name: 'get_student_archives' },
-            { name: 'get_archives_by_year' },
+            // Teacher Management
+            { name: 'manage_teachers' }, // create, read, update, delete teachers
+            { name: 'assign_teacher_subjects' }, // assign teachers to subjects
+            { name: 'view_teacher_schedules' }, // view teacher schedules and classes
 
-            // Attendance - Students
-            { name: 'create_students_attendance' },
-            { name: 'get_students_attendance' },
-            { name: 'get_student_attendance' },
-            { name: 'update_students_attendance' },
-            { name: 'delete_students_attendance' },
-            { name: 'get_attendance_by_date' },
-            { name: 'get_attendance_by_student' },
-            { name: 'get_attendance_reports' },
+            // Exam Management
+            { name: 'manage_exams' }, // create, read, update, delete exams
+            { name: 'manage_questions' }, // create, read, update, delete questions and options
+            { name: 'manage_exam_attempts' }, // create, read, update, delete exam attempts
+            { name: 'view_exam_results' }, // view exam results and analytics
 
-            // Attendance - Teachers
-            { name: 'create_teachers_attendance' },
-            { name: 'get_teachers_attendance' },
-            { name: 'get_teacher_attendance' },
-            { name: 'update_teachers_attendance' },
-            { name: 'delete_teachers_attendance' },
+            // Grade Management
+            { name: 'manage_grades' }, // create, read, update, delete grades
 
-            // Attendance - Employees
-            { name: 'create_employees_attendance' },
-            { name: 'get_employees_attendance' },
-            { name: 'get_employee_attendance' },
-            { name: 'update_employees_attendance' },
-            { name: 'delete_employees_attendance' },
+            // Attendance Management
+            { name: 'manage_student_attendance' }, // create, read, update, delete student attendance
+            { name: 'manage_teacher_attendance' }, // create, read, update, delete teacher attendance
+            { name: 'manage_employee_attendance' }, // create, read, update, delete employee attendance
+            { name: 'view_attendance_reports' }, // view attendance reports and analytics
 
-            // Behavior
-            { name: 'create_behavior' },
-            { name: 'get_behaviors' },
-            { name: 'get_behavior' },
-            { name: 'update_behavior' },
-            { name: 'delete_behavior' },
-            { name: 'get_student_behaviors' },
-            { name: 'get_behaviors_by_type' },
-            { name: 'get_behavior_reports' },
+            // Behavior Management
+            { name: 'manage_behaviors' }, // create, read, update, delete behaviors
+            { name: 'view_behavior_reports' }, // view behavior reports and analytics
 
-            // Classes
-            { name: 'create_class' },
-            { name: 'get_classes' },
-            { name: 'get_class' },
-            { name: 'update_class' },
-            { name: 'delete_class' },
-            { name: 'get_class_students' },
-            { name: 'get_classes_by_grade' },
+            // Schedule Management
+            { name: 'manage_schedules' }, // create, read, update, delete schedules
+            { name: 'manage_days_periods' }, // create, read, update, delete days and periods
 
-            // Curriculum
-            { name: 'create_curriculum' },
-            { name: 'get_curriculums' },
-            { name: 'get_curriculum' },
-            { name: 'update_curriculum' },
-            { name: 'delete_curriculum' },
-            { name: 'get_active_curriculums' },
+            // Financial Management
+            { name: 'manage_tuition_payments' }, // create, read, update, delete tuition payments
 
-            // Days
-            { name: 'create_day' },
-            { name: 'get_days' },
-            { name: 'get_day' },
-            { name: 'update_day' },
-            { name: 'delete_day' },
+            // User Management
+            { name: 'manage_users' }, // create, read, update, delete users
+            { name: 'manage_roles' }, // create, read, update, delete roles
+            { name: 'manage_permissions' }, // create, read, update, delete permissions
 
-            // Exams
-            { name: 'create_exam' },
-            { name: 'get_exams' },
-            { name: 'get_exam' },
-            { name: 'get_preexams' },
-            { name: 'get_next_exams' },
-            { name: 'get_upcoming_exams' },
-            { name: 'get_completed_exams' },
-            { name: 'update_exam' },
-            { name: 'delete_exam' },
-            { name: 'get_exam_questions' },
-            { name: 'get_exam_results' },
-            { name: 'get_exams_by_subject' },
-            { name: 'get_exams_by_semester' },
-
-            // Exam Attempts
-            { name: 'create_exam_attempt' },
-            { name: 'get_exam_attempts' },
-            { name: 'get_exam_attempt' },
-            { name: 'update_exam_attempt' },
-            { name: 'delete_exam_attempt' },
-            { name: 'get_student_exam_attempts' },
-            { name: 'get_exam_attempt_results' },
-
-            // Questions and Options
-            { name: 'create_question' },
-            { name: 'get_questions' },
-            { name: 'get_question' },
-            { name: 'update_question' },
-            { name: 'delete_question' },
-            { name: 'get_questions_by_subject' },
-            { name: 'get_questions_by_type' },
-            { name: 'create_option' },
-            { name: 'get_options' },
-            { name: 'get_option' },
-            { name: 'update_option' },
-            { name: 'delete_option' },
-            { name: 'get_question_options' },
-
-            // Periods
-            { name: 'create_period' },
-            { name: 'get_periods' },
-            { name: 'get_period' },
-            { name: 'update_period' },
-            { name: 'delete_period' },
-
-            // Roles and Permissions
-            { name: 'create_role' },
-            { name: 'get_roles' },
-            { name: 'get_role' },
-            { name: 'update_role' },
-            { name: 'delete_role' },
-            { name: 'create_permission' },
-            { name: 'get_permissions' },
-            { name: 'get_permission' },
-            { name: 'update_permission' },
-            { name: 'delete_permission' },
-            { name: 'assign_role_permissions' },
-            { name: 'get_role_permissions' },
-
-            // Schedules
-            { name: 'create_schedule' },
-            { name: 'get_schedules' },
-            { name: 'get_schedule' },
-            { name: 'update_schedule' },
-            { name: 'delete_schedule' },
-            { name: 'get_teacher_schedule' },
-            { name: 'get_class_schedule' },
-
-            // Semesters
-            { name: 'create_semester' },
-            { name: 'get_semesters' },
-            { name: 'get_semester' },
-            { name: 'update_semester' },
-            { name: 'delete_semester' },
-            { name: 'get_current_semester' },
-            { name: 'get_semesters_by_year' },
-
-            // Students
-            { name: 'create_student' },
-            { name: 'get_students' },
-            { name: 'get_student' },
-            { name: 'update_student' },
-            { name: 'delete_student' },
-            { name: 'get_students_by_class' },
-            { name: 'get_students_by_grade' },
-            { name: 'get_student_profile' },
-            { name: 'get_student_grades' },
-            { name: 'get_student_exams' },
-
-            // Subjects
-            { name: 'create_subject' },
-            { name: 'get_subjects' },
-            { name: 'get_subject' },
-            { name: 'update_subject' },
-            { name: 'delete_subject' },
-            { name: 'get_subjects_by_curriculum' },
-            { name: 'get_teacher_subjects' },
-
-            // Teachers
-            { name: 'create_teacher' },
-            { name: 'get_teachers' },
-            { name: 'get_teacher' },
-            { name: 'update_teacher' },
-            { name: 'delete_teacher' },
-            { name: 'get_teachers_by_subject' },
-            { name: 'get_teacher_classes' },
-            { name: 'assign_teacher_subject' },
-
-            // Tuition Payments
-            { name: 'create_tuition_payment' },
-            { name: 'get_tuition_payments' },
-            { name: 'get_tuition_payment' },
-            { name: 'update_tuition_payment' },
-            { name: 'delete_tuition_payment' },
-            { name: 'get_student_payments' },
-            { name: 'get_payments_by_date' },
-            { name: 'get_payment_reports' },
-            { name: 'verify_payment' },
-
-            // Users
-            { name: 'create_user' },
-            { name: 'get_users' },
-            { name: 'get_user' },
-            { name: 'update_user' },
-            { name: 'delete_user' },
-            { name: 'get_users_by_role' },
-            { name: 'get_user_profile' },
-            { name: 'update_user_role' },
-
-            // Grades
-            { name: 'create_grade' },
-            { name: 'get_grades' },
-            { name: 'get_grade' },
-            { name: 'update_grade' },
-            { name: 'delete_grade' },
-            { name: 'get_grades_by_subject' },
-            { name: 'get_grades_by_semester' },
-            { name: 'get_grade_reports' },
+            // System Management
+            { name: 'view_dashboard' }, // view system dashboard and analytics
+            { name: 'manage_notifications' }, // create, read, update, delete notifications
+            { name: 'manage_fcm_tokens' }, // manage push notification tokens
         ];
 
         const permissions = await knex('permissions')

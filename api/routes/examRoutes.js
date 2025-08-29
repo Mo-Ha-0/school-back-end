@@ -10,13 +10,14 @@ router.post(
     '/',
     examValidator,
     authMiddleware,
-    hasPermission('create_exam'),
+    hasPermission('manage_exams'),
     examController.createExamWithQuestions
 );
+
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_exams'),
+    hasPermission('manage_exams'),
     examController.getAllExams
 );
 router.get(
@@ -34,43 +35,45 @@ router.get(
 router.get(
     '/student-preexams',
     authMiddleware,
-    hasPermission('get_preexams'),
+    // hasPermission('get_preexams'),
     examController.getAllPreExamsForSemester
 );
 router.get(
     '/student-prequizzes',
     authMiddleware,
-    hasPermission('get_preexams'),
+    // hasPermission('get_preexams'),
     examController.getAllPreQuizzesForSemester
 );
 router.get(
     '/student-nextexams',
     authMiddleware,
-    hasPermission('get_next_exams'),
+    // hasPermission('get_next_exams'),
     examController.getUpComingExam
 );
 router.get(
     '/student-nextquizzes',
     authMiddleware,
-    hasPermission('get_next_exams'),
+    // hasPermission('get_next_exams'),
     examController.getUpComingQuiz
 );
 router.get(
     '/subject/:subject_id/semesters',
     authMiddleware,
-    hasPermission('get_preexams'),
+    // hasPermission('get_preexams'),
     examController.getsemestersBySubjectForPreExam
 );
+
 router.get(
     '/subject/:subject_id/quiz-semesters',
     authMiddleware,
-    hasPermission('get_preexams'),
+    // hasPermission('get_preexams'),
     examController.getsemestersBySubjectForPreQuiz
 );
+
 router.get(
     '/questions',
     authMiddleware,
-    hasPermission('get_exam_questions'),
+    // hasPermission('get_exam_questions'),
     examController.getExamQuestion
 );
 
@@ -90,21 +93,22 @@ router.post('/quiz/:quizId/submit', examController.submitQuizAnswers);
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_exams'),
+    // hasPermission('get_exams'),
     examController.getExam
 );
+
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_exam'),
+    hasPermission('manage_exams'),
     examController.updateExam
 );
+
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_exam'),
+    hasPermission('manage_exams'),
     examController.deleteExam
 );
 
-//authMiddleware,checkRoles(['admin']),
 module.exports = router;

@@ -8,7 +8,7 @@ const hasPermission = require('../../middleware/hasPermission');
 router.get(
     '/stats',
     authMiddleware,
-    hasPermission('get_users'),
+    hasPermission('view_dashboard'),
     dashboardController.getDetailedDashboardStats
 );
 
@@ -16,7 +16,7 @@ router.get(
 router.get(
     '/stats/basic',
     authMiddleware,
-    hasPermission('get_users'),
+    hasPermission('view_dashboard'),
     dashboardController.getDashboardStats
 );
 
@@ -24,28 +24,28 @@ router.get(
 router.get(
     '/stats/students',
     authMiddleware,
-    hasPermission('get_students'),
+    hasPermission('view_dashboard'),
     dashboardController.getTotalStudents
 );
 
 router.get(
     '/stats/teachers',
     authMiddleware,
-    hasPermission('get_teachers'),
+    hasPermission('view_dashboard'),
     dashboardController.getActiveTeachers
 );
 
 router.get(
     '/stats/classes-today',
     authMiddleware,
-    hasPermission('get_schedules'),
+    hasPermission('view_dashboard'),
     dashboardController.getClassesToday
 );
 
 router.get(
     '/stats/attendance-rate',
     authMiddleware,
-    hasPermission('get_students_attendance'),
+    hasPermission('view_dashboard'),
     dashboardController.getAttendanceRate
 );
 

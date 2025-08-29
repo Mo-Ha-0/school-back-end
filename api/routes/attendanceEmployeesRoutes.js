@@ -12,40 +12,40 @@ router.post(
     '/',
     attendanceEmployeesValidator,
     authMiddleware,
-    hasPermission('create_employees_attendance'),
+    hasPermission('manage_employee_attendance'),
     attendanceEmployeesController.createAttendanceEmployees
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_employees_attendance'),
+    hasPermission('manage_employee_attendance'),
     attendanceEmployeesController.getAllAttendanceEmployees
 );
 
 router.get(
     '/employee/:employeeId',
     authMiddleware,
-    hasPermission('get_employees_attendance'),
+    hasPermission('manage_employee_attendance'),
     attendanceEmployeesController.getAttendanceByEmployeeId
 );
 
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_employees_attendance'),
+    hasPermission('manage_employee_attendance'),
     attendanceEmployeesController.getAttendanceEmployees
 );
 
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_employees_attendance'),
+    hasPermission('manage_employee_attendance'),
     attendanceEmployeesController.updateAttendanceEmployees
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_employees_attendance'),
+    hasPermission('manage_employee_attendance'),
     attendanceEmployeesController.deleteAttendanceEmployees
 );
 

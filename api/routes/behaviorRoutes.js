@@ -1,22 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const behaviorController = require('../controllers/behaviorController');
+const { checkRoles } = require('../../middleware/roleMiddleware');
 const authMiddleware = require('../../middleware/authMiddleware');
-const hasPermission = require('../../middleware/hasPermission');
 const { behaviorValidator } = require('../validators/behaviorValidator');
+const hasPermission = require('../../middleware/hasPermission');
 
 router.post(
     '/',
-    authMiddleware,
-    hasPermission('create_behavior'),
     behaviorValidator,
+    authMiddleware,
+    hasPermission('manage_behaviors'),
     behaviorController.createBehavior
 );
 
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_behaviors'),
+    hasPermission('manage_behaviors'),
     behaviorController.getAllBehaviors
 );
 
@@ -30,21 +31,21 @@ router.get(
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('get_behaviors'),
+    // hasPermission('get_behaviors'),
     behaviorController.getBehavior
 );
 
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('update_behavior'),
+    hasPermission('manage_behaviors'),
     behaviorController.updateBehavior
 );
 
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_behavior'),
+    hasPermission('manage_behaviors'),
     behaviorController.deleteBehavior
 );
 
