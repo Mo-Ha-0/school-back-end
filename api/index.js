@@ -32,6 +32,7 @@ const teacherSubjectsRoutes = require('./routes/teacherSubjectsRoutes');
 const behaviorRoutes = require('./routes/behaviorRoutes');
 const gradeRoutes = require('./routes/gradeRoutes');
 const paginationRoutes = require('./routes/paginationRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 // Mount routes
 router.use('/users', userRoutes);
@@ -64,5 +65,6 @@ router.use('/behaviors', behaviorRoutes);
 router.use('/permissions', permissionRoutes);
 router.use('/grades', gradeRoutes);
 router.use('/pagination', paginationRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 module.exports = router;
