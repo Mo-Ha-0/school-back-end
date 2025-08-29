@@ -251,6 +251,20 @@ School Administration Team`
         }
     },
 
+    async getStudentByUserId(req, res) {
+        try {
+            const { userId } = req.params;
+            const student = await studentService.findByUserId(userId);
+            if (!student)
+                return res
+                    .status(404)
+                    .json({ error: 'Student not found for this user' });
+            res.json(student);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    },
+
     async getAllStudents(req, res) {
         try {
             const student = await studentService.getAllStudents();
