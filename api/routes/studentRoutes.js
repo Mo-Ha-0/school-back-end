@@ -91,13 +91,6 @@ router.get(
 );
 
 router.get(
-    '/user/:userId',
-    authMiddleware,
-    hasPermission('get_students'),
-    studentController.getStudentByUserId
-);
-
-router.get(
     '/:id',
     authMiddleware,
     hasPermission('get_students'),
