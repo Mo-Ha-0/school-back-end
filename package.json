@@ -4,12 +4,12 @@
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "npx knex migrate:rollback && npx knex migrate:latest && npx knex seed:run --specific 0_comprehensive_school_seed.js && node server.js",
+        "start": "npm run db:fresh && node server.js",
         "dev": "nodemon server.js",
         "seed": "npx knex seed:run --specific 0_comprehensive_school_seed.js",
         "seed:run": "npx knex seed:run --specific 0_comprehensive_school_seed.js",
-        "db:fresh": "npx knex migrate:rollback && npx knex migrate:latest && npx knex seed:run --specific 0_comprehensive_school_seed.js",
-        "db:reset": "npx knex migrate:rollback && npx knex migrate:latest && npx knex seed:run --specific 0_comprehensive_school_seed.js"
+        "db:fresh": "npx knex migrate:rollback --all && npx knex migrate:latest && npx knex seed:run --specific 0_comprehensive_school_seed.js",
+        "db:reset": "npx knex migrate:rollback --all && npx knex migrate:latest && npx knex seed:run --specific 0_comprehensive_school_seed.js"
     },
     "keywords": [],
     "author": "",
