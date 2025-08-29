@@ -44,9 +44,7 @@ app.use(bodyparser.json({ limit: '10mb' }));
 // CORS protection
 app.use(
     cors({
-        origin: process.env.ALLOWED_ORIGINS
-            ? process.env.ALLOWED_ORIGINS.split(',')
-            : '*',
+        origin: '*',
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'token'],
