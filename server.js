@@ -4,49 +4,187 @@ const apiRouter = require('./api');
 const bodyparser = require('body-parser');
 const cors = require('cors');
 const userService = require('./api/services/userService');
+const {
+    createErrorResponse,
+    logError,
+    HTTP_STATUS,
+} = require('./api/utils/errorHandler');
 
 // Firebase SDK
 const admin = require('./firebase/firebase-admin.js');
 require('dotenv').config();
-// Middleware
-app.use(express.json());
 
-//to parse json
-app.use(bodyparser.json());
+// Global uncaught exception handler
+process.on('uncaughtException', (error) => {
+    logError('Uncaught Exception', error, { critical: true });
+    console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+    process.exit(1);
+});
 
-//Cores protection
-app.use(cors());
+// Global unhandled promise rejection handler
+process.on('unhandledRejection', (reason, promise) => {
+    logError('Unhandled Rejection', reason, { promise, critical: true });
+    console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+    process.exit(1);
+});
 
-const message = {
-    notification: {
-        title: 'ttil',
+// Middleware for parsing JSON with error handling
+app.use(
+    express.json({
+        limit: '10mb',
+        verify: (req, res, buf) => {
+            req.rawBody = buf;
+        },
+    })
+);
 
-        body: 'abd sdfasdnigga',
-    },
-    token: 'f5vjrD8YdugkOR1z-Bz-XY:APA91bFi-z0XmA58Y3ffdhJQHyP6cGuO-frEQ2-SrVKYRBVyBuMeJq6v6XdVqNUSyesjEM0pgs2OFEpd21VoTzStYz6RFSfTLeroncdAbV7i92VLzexPVC4',
+// Body parser with error handling
+app.use(bodyparser.json({ limit: '10mb' }));
 
-    // token: 'fXGW_K3eUHy0Uzxcal5hDE:APA91bEpouIwNloMF71qh5mGYeHDhWmJ9tMNg-nNA3oC-7axbyd7QLkx0pTIsj5W0VynSW6zLCh883Mj2ljPSP5GL0KDHKi-OGPm2NQxQxp39J3-gWBLxO8'
-};
-async function ll() {
-    const response = await admin.messaging().send(message);
-    console.log(response);
-}
+// CORS protection
+app.use(
+    cors({
+        origin: process.env.ALLOWED_ORIGINS
+            ? process.env.ALLOWED_ORIGINS.split(',')
+            : '*',
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'token'],
+    })
+);
 
-// ll();
+// Request logging middleware
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(
+        `[${timestamp}] ${req.method} ${req.originalUrl} - IP: ${req.ip}`
+    );
+    next();
+});
 
-// userService.sendWhatsAppMessage('+963948576512','usdsdfs');
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+    });
+});
 
 // API routes
 app.use('/api', apiRouter);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Internal Server Error' });
+// Handle 404 - Route not found (catch all unmatched routes)
+app.use((req, res) => {
+    res.status(HTTP_STATUS.NOT_FOUND).json(
+        createErrorResponse(
+            `Route ${req.originalUrl} not found on this server`,
+            null,
+            'ROUTE_NOT_FOUND'
+        )
+    );
 });
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+    // Log the error
+    logError('Global error handler', err, {
+        url: req.originalUrl,
+        method: req.method,
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        userId: req.user?.id,
+    });
+
+    // Handle specific error types
+    let statusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR;
+    let message = 'Something went wrong on the server';
+    let code = 'INTERNAL_ERROR';
+
+    // JSON parsing errors
+    if (err.type === 'entity.parse.failed') {
+        statusCode = HTTP_STATUS.BAD_REQUEST;
+        message = 'Invalid JSON in request body';
+        code = 'INVALID_JSON';
+    }
+
+    // Request entity too large
+    if (err.type === 'entity.too.large') {
+        statusCode = HTTP_STATUS.BAD_REQUEST;
+        message = 'Request entity too large';
+        code = 'PAYLOAD_TOO_LARGE';
+    }
+
+    // Validation errors
+    if (err.name === 'ValidationError') {
+        statusCode = HTTP_STATUS.BAD_REQUEST;
+        message = err.message || 'Validation failed';
+        code = 'VALIDATION_ERROR';
+    }
+
+    // Database connection errors
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+        message = 'Database connection failed';
+        code = 'DATABASE_CONNECTION_ERROR';
+    }
+
+    // JWT errors
+    if (err.name === 'JsonWebTokenError') {
+        statusCode = HTTP_STATUS.UNAUTHORIZED;
+        message = 'Invalid token';
+        code = 'INVALID_TOKEN';
+    }
+
+    if (err.name === 'TokenExpiredError') {
+        statusCode = HTTP_STATUS.UNAUTHORIZED;
+        message = 'Token expired';
+        code = 'TOKEN_EXPIRED';
+    }
+
+    // Send error response
+    res.status(statusCode).json(
+        createErrorResponse(
+            message,
+            process.env.NODE_ENV === 'development' ? err.stack : undefined,
+            code
+        )
+    );
+});
+
+// Graceful shutdown handler
+const gracefulShutdown = (signal) => {
+    console.log(`\n${signal} received. Starting graceful shutdown...`);
+
+    // Close server first
+    server.close(() => {
+        console.log('HTTP server closed.');
+
+        // Close database connections, cleanup resources, etc.
+        // Add your cleanup logic here
+
+        console.log('Graceful shutdown completed.');
+        process.exit(0);
+    });
+
+    // Force shutdown after 30 seconds
+    setTimeout(() => {
+        console.error('Forced shutdown after timeout.');
+        process.exit(1);
+    }, 30000);
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+    console.log(`\n🚀 School Management System Server`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📡 Server running on port ${PORT}`);
+    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+    console.log(`📚 API Base URL: http://localhost:${PORT}/api`);
+    console.log(`⏰ Started at: ${new Date().toISOString()}`);
 });

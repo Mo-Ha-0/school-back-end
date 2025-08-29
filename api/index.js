@@ -13,27 +13,26 @@ const archiveRoutes = require('./routes/archiveRoutes');
 const dayRoutes = require('./routes/dayRoutes');
 const periodRoutes = require('./routes/periodRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
-
 const examRoutes = require('./routes/examRoutes');
 const questionRoutes = require('./routes/questionRoutes');
 const optionRoutes = require('./routes/optionRoutes');
 const answerRoutes = require('./routes/answerRoutes');
 const examAttemptRoutes = require('./routes/examAttemptRoutes');
 const examQuestionRoutes = require('./routes/examQuestionRoutes');
-
+const semesterRoutes = require('./routes/semesterRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const attendanceStudentsRoutes = require('./routes/attendanceStudentsRoutes');
 const attendanceEmployeesRoutes = require('./routes/attendanceEmployeesRoutes');
 const attendanceTeachersRoutes = require('./routes/attendanceTeachersRoutes');
 const fcmTokenRoutes = require('./routes/fcmTokenRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
-const semesterRoutes = require('./routes/semesterRoutes');
 const tuitionPaymentRoutes = require('./routes/tuitionPaymentRoutes');
 const permissionRoutes = require('./routes/permissionRoutes');
 const teacherSubjectsRoutes = require('./routes/teacherSubjectsRoutes');
 const behaviorRoutes = require('./routes/behaviorRoutes');
 const gradeRoutes = require('./routes/gradeRoutes');
 const paginationRoutes = require('./routes/paginationRoutes');
+
 // Mount routes
 router.use('/users', userRoutes);
 router.use('/teachers', teacherRoutes);

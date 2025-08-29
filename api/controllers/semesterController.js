@@ -1,6 +1,12 @@
 const semesterService = require('../services/semesterService');
 const { db } = require('../../config/db');
 const { validationResult } = require('express-validator');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+} = require('../utils/errorHandler');
 
 const bcrypt = require('bcrypt-nodejs');
 module.exports = {
@@ -8,23 +14,54 @@ module.exports = {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
             const Semester = await semesterService.createSemester(req.body);
-            res.status(201).json(Semester);
+            res.status(HTTP_STATUS.CREATED).json(Semester);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Create semester failed', error, {
+                semester_name: req.body.semester_name,
+                academic_year_id: req.body.academic_year_id,
+                createdBy: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create semester.',
+                    null,
+                    'CREATE_SEMESTER_ERROR'
+                )
+            );
         }
     },
 
     async getSemester(req, res) {
         try {
             const Semester = await semesterService.getSemester(req.params.id);
-            if (!Semester)
-                return res.status(404).json({ error: 'Semester not found' });
+            if (!Semester) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Semester not found',
+                            null,
+                            'SEMESTER_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(Semester);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get semester failed', error, {
+                semesterId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve semester.',
+                    null,
+                    'GET_SEMESTER_ERROR'
+                )
+            );
         }
     },
 
@@ -33,7 +70,14 @@ module.exports = {
             const Semester = await semesterService.getAllSemesters();
             res.json(Semester);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get all semesters failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve semesters.',
+                    null,
+                    'GET_SEMESTERS_ERROR'
+                )
+            );
         }
     },
 
@@ -43,22 +87,60 @@ module.exports = {
                 req.params.id,
                 req.body
             );
-            if (!Semester || Semester.length == 0)
-                return res.status(404).json({ error: 'Semester not found' });
+            if (!Semester || Semester.length == 0) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Semester not found',
+                            null,
+                            'SEMESTER_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(Semester);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Update semester failed', error, {
+                semesterId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update semester.',
+                    null,
+                    'UPDATE_SEMESTER_ERROR'
+                )
+            );
         }
     },
 
     async deleteSemester(req, res) {
         try {
             const result = await semesterService.deleteSemester(req.params.id);
-            if (!result)
-                return res.status(404).json({ error: 'Semester not found' });
-            res.status(200).json({ message: 'deleted successfuly' });
+            if (!result) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Semester not found',
+                            null,
+                            'SEMESTER_NOT_FOUND'
+                        )
+                    );
+            }
+            res.status(HTTP_STATUS.OK).json({
+                message: 'Semester deleted successfully',
+            });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Delete semester failed', error, {
+                semesterId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete semester.',
+                    null,
+                    'DELETE_SEMESTER_ERROR'
+                )
+            );
         }
     },
 
@@ -80,8 +162,14 @@ module.exports = {
 
             if (!student) {
                 return res
-                    .status(404)
-                    .json({ error: 'Student record not found for this user' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Student record not found for this user',
+                            null,
+                            'STUDENT_NOT_FOUND'
+                        )
+                    );
             }
 
             // 2. Get the curriculum of the subject
@@ -91,14 +179,28 @@ module.exports = {
                 .first();
 
             if (!subject) {
-                return res.status(404).json({ error: 'Subject not found' });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Subject not found',
+                            null,
+                            'SUBJECT_NOT_FOUND'
+                        )
+                    );
             }
 
             // 3. Make sure the curriculum matches
             if (student.curriculum_id !== subject.curriculum_id) {
-                return res.status(403).json({
-                    error: 'Student curriculum does not match subject curriculum',
-                });
+                return res
+                    .status(HTTP_STATUS.FORBIDDEN)
+                    .json(
+                        createErrorResponse(
+                            'Student curriculum does not match subject curriculum',
+                            null,
+                            'CURRICULUM_MISMATCH'
+                        )
+                    );
             }
 
             // Get distinct semesters with valid exams
@@ -115,8 +217,17 @@ module.exports = {
 
             res.json(semesters);
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal server error' });
+            logError('Get semesters by subject failed', err, {
+                subject_id,
+                userId,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve semesters for subject.',
+                    null,
+                    'GET_SUBJECT_SEMESTERS_ERROR'
+                )
+            );
         }
     },
 

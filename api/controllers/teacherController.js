@@ -2,6 +2,13 @@ const teacherService = require('../services/teacherService');
 const userService = require('../services/userService');
 const { validationResult } = require('express-validator');
 const roleService = require('../services/roleService');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+    handleTransactionError,
+} = require('../utils/errorHandler');
 
 const bcrypt = require('bcrypt-nodejs');
 const { getSubject } = require('./subjectController');
@@ -12,7 +19,9 @@ module.exports = {
             const { db } = require('../../config/db');
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
             const {
                 name,
@@ -30,8 +39,14 @@ module.exports = {
             const role = await roleService.getRoleByName('teacher');
             if (!role || role.length == 0) {
                 return res
-                    .status(400)
-                    .json({ msg: 'there is no role for teacher' });
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Teacher role not found in system.',
+                            null,
+                            'ROLE_NOT_FOUND'
+                        )
+                    );
             }
 
             const result = await db.transaction(async (trx) => {
@@ -78,20 +93,63 @@ module.exports = {
                 return Teacher;
             });
 
-            res.status(201).json(result);
+            res.status(HTTP_STATUS.CREATED).json(result);
         } catch (error) {
-            res.status(400).json({
-                error: error.message,
-                msg: 'Failed to create student. All changes rolled back.',
+            logError('Create teacher failed', error, {
+                email: req.body.email,
+                specialization: req.body.specialization,
+                createdBy: req.user?.id,
             });
+
+            // Handle specific database errors
+            if (error.code === '23505') {
+                return res
+                    .status(HTTP_STATUS.CONFLICT)
+                    .json(
+                        createErrorResponse(
+                            'A user with this email already exists.',
+                            null,
+                            'EMAIL_EXISTS'
+                        )
+                    );
+            }
+
+            if (error.code === '23503') {
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Invalid role_id or subject_ids provided.',
+                            null,
+                            'INVALID_FOREIGN_KEY'
+                        )
+                    );
+            }
+
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create teacher due to server error.',
+                    null,
+                    'CREATE_TEACHER_ERROR'
+                )
+            );
         }
     },
 
     async getTeacher(req, res) {
         try {
             const teacher = await teacherService.getTeacher(req.params.id);
-            if (!teacher)
-                return res.status(404).json({ error: 'Teacher not found' });
+            if (!teacher) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Teacher not found.',
+                            null,
+                            'TEACHER_NOT_FOUND'
+                        )
+                    );
+            }
 
             const formatted = {
                 ...teacher,
@@ -100,7 +158,14 @@ module.exports = {
             };
             res.json(formatted);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get teacher failed', error, { teacherId: req.params.id });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve teacher.',
+                    null,
+                    'GET_TEACHER_ERROR'
+                )
+            );
         }
     },
 
@@ -114,7 +179,14 @@ module.exports = {
             }));
             res.json(formatted);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get all teachers failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve teachers.',
+                    null,
+                    'GET_TEACHERS_ERROR'
+                )
+            );
         }
     },
 
@@ -124,8 +196,17 @@ module.exports = {
             const teacherId = req.params.id;
 
             const existingTeacher = await teacherService.getTeacher(teacherId);
-            if (!existingTeacher)
-                return res.status(404).json({ error: 'Teacher not found' });
+            if (!existingTeacher) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Teacher not found.',
+                            null,
+                            'TEACHER_NOT_FOUND'
+                        )
+                    );
+            }
 
             const {
                 name,
@@ -182,31 +263,76 @@ module.exports = {
             const updated = await teacherService.getTeacher(teacherId);
             res.json(updated);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Update teacher failed', error, {
+                teacherId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update teacher.',
+                    null,
+                    'UPDATE_TEACHER_ERROR'
+                )
+            );
         }
     },
 
     async deleteTeacher(req, res) {
         try {
             const result = await teacherService.deleteTeacher(req.params.id);
-            if (!result)
-                return res.status(404).json({ error: 'Teacher not found' });
-            res.status(200).json({ message: 'deleted successfuly' });
+            if (!result) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Teacher not found.',
+                            null,
+                            'TEACHER_NOT_FOUND'
+                        )
+                    );
+            }
+            res.status(HTTP_STATUS.OK).json({
+                message: 'Teacher deleted successfully',
+            });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Delete teacher failed', error, {
+                teacherId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete teacher.',
+                    null,
+                    'DELETE_TEACHER_ERROR'
+                )
+            );
         }
     },
     async getSubjects(req, res) {
         try {
             const teacher = await teacherService.findByUserId(req.user.id);
             const subjects = await teacherService.getSubjects(teacher.id);
-            if (!subjects || subjects.length == 0)
+            if (!subjects || subjects.length == 0) {
                 return res
-                    .status(404)
-                    .json({ error: 'Teacher subjects not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Teacher subjects not found.',
+                            null,
+                            'TEACHER_SUBJECTS_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(subjects);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get teacher subjects failed', error, {
+                teacherId: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve teacher subjects.',
+                    null,
+                    'GET_TEACHER_SUBJECTS_ERROR'
+                )
+            );
         }
     },
 
@@ -214,16 +340,43 @@ module.exports = {
         try {
             const teacher = await teacherService.findByUserId(req.user.id);
 
-            if (!teacher)
-                return res.status(404).json({ error: 'Teacher not found' });
+            if (!teacher) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Teacher not found.',
+                            null,
+                            'TEACHER_NOT_FOUND'
+                        )
+                    );
+            }
             const schedule = await teacherService.getTeacherSchedule(
                 teacher.id
             );
-            if (!schedule)
-                return res.status(404).json({ error: 'Schedule not found' });
+            if (!schedule) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Schedule not found.',
+                            null,
+                            'SCHEDULE_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(schedule);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get teacher schedule failed', error, {
+                teacherId: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve teacher schedule.',
+                    null,
+                    'GET_TEACHER_SCHEDULE_ERROR'
+                )
+            );
         }
     },
 
@@ -231,13 +384,29 @@ module.exports = {
         try {
             const teacher = await teacherService.findByUserId(req.user.id);
             const questions = await teacherService.getQuestions(teacher.id);
-            if (!questions || questions.length == 0)
+            if (!questions || questions.length == 0) {
                 return res
-                    .status(404)
-                    .json({ error: 'Teacher questions not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Teacher questions not found.',
+                            null,
+                            'TEACHER_QUESTIONS_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(questions);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get teacher questions failed', error, {
+                teacherId: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve teacher questions.',
+                    null,
+                    'GET_TEACHER_QUESTIONS_ERROR'
+                )
+            );
         }
     },
 
@@ -245,16 +414,41 @@ module.exports = {
         try {
             const teacher = await teacherService.findByUserId(req.user.id);
             console.log(req.user.id);
-            if (!teacher)
-                return res.status(404).json({ error: 'Teacher not found' });
-            const students = await teacherService.getStudents(teacher.id);
-            if (!students || students.length == 0)
+            if (!teacher) {
                 return res
-                    .status(404)
-                    .json({ error: 'No students found for this teacher' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Teacher not found.',
+                            null,
+                            'TEACHER_NOT_FOUND'
+                        )
+                    );
+            }
+            const students = await teacherService.getStudents(teacher.id);
+            if (!students || students.length == 0) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'No students found for this teacher.',
+                            null,
+                            'NO_STUDENTS_FOUND'
+                        )
+                    );
+            }
             res.json(students);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get teacher students failed', error, {
+                teacherId: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve teacher students.',
+                    null,
+                    'GET_TEACHER_STUDENTS_ERROR'
+                )
+            );
         }
     },
 
@@ -264,13 +458,29 @@ module.exports = {
             const classess = await teacherService.getClassesByTeacher(
                 teacher.id
             );
-            if (!classess || classess.length == 0)
+            if (!classess || classess.length == 0) {
                 return res
-                    .status(404)
-                    .json({ error: 'Teacher classess not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Teacher classes not found.',
+                            null,
+                            'TEACHER_CLASSES_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(classess);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get teacher classes failed', error, {
+                teacherId: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve teacher classes.',
+                    null,
+                    'GET_TEACHER_CLASSES_ERROR'
+                )
+            );
         }
     },
 };

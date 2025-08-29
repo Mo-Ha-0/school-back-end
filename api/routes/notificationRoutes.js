@@ -28,6 +28,13 @@ router.get(
     notificationController.getAllNotificationes
 );
 
+router.put(
+    '/:id/read',
+    authMiddleware,
+    hasPermission('update_notification'),
+    notificationController.updateNotificationIsRead
+);
+
 router.get(
     '/:id',
     authMiddleware,
@@ -41,12 +48,7 @@ router.put(
     hasPermission('update_notification'),
     notificationController.updateNotification
 );
-router.put(
-    '/:id/read',
-    authMiddleware,
-    hasPermission('update_notification'),
-    notificationController.updateNotificationIsRead
-);
+
 router.delete(
     '/:id',
     authMiddleware,

@@ -2,29 +2,66 @@ const scheduleService = require('../services/scheduleService');
 const { validationResult } = require('express-validator');
 const studentService = require('../services/studentService');
 const { db } = require('../../config/db');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+} = require('../utils/errorHandler');
 
 module.exports = {
     async createSchedule(req, res) {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
             const Schedule = await scheduleService.createSchedule(req.body);
-            res.status(201).json(Schedule);
+            res.status(HTTP_STATUS.CREATED).json(Schedule);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Create schedule failed', error, {
+                class_id: req.body.class_id,
+                subject_id: req.body.subject_id,
+                createdBy: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create schedule.',
+                    null,
+                    'CREATE_SCHEDULE_ERROR'
+                )
+            );
         }
     },
 
     async getSchedule(req, res) {
         try {
             const schedule = await scheduleService.getSchedule(req.params.id);
-            if (!schedule)
-                return res.status(404).json({ error: 'Schedule not found' });
+            if (!schedule) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Schedule not found',
+                            null,
+                            'SCHEDULE_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(schedule);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get schedule failed', error, {
+                scheduleId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve schedule.',
+                    null,
+                    'GET_SCHEDULE_ERROR'
+                )
+            );
         }
     },
 
@@ -33,7 +70,14 @@ module.exports = {
             const schedules = await scheduleService.getAllSchedules();
             res.json(schedules);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get all schedules failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve schedules.',
+                    null,
+                    'GET_SCHEDULES_ERROR'
+                )
+            );
         }
     },
 
@@ -43,22 +87,60 @@ module.exports = {
                 req.params.id,
                 req.body
             );
-            if (!schedule)
-                return res.status(404).json({ error: 'Schedule not found' });
+            if (!schedule) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Schedule not found',
+                            null,
+                            'SCHEDULE_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(schedule);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Update schedule failed', error, {
+                scheduleId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update schedule.',
+                    null,
+                    'UPDATE_SCHEDULE_ERROR'
+                )
+            );
         }
     },
 
     async deleteSchedule(req, res) {
         try {
             const result = await scheduleService.deleteSchedule(req.params.id);
-            if (!result)
-                return res.status(404).json({ error: 'Schedule not found' });
-            res.status(200).json({ message: 'deleted successfuly' });
+            if (!result) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Schedule not found',
+                            null,
+                            'SCHEDULE_NOT_FOUND'
+                        )
+                    );
+            }
+            res.status(HTTP_STATUS.OK).json({
+                message: 'Schedule deleted successfully',
+            });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Delete schedule failed', error, {
+                scheduleId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete schedule.',
+                    null,
+                    'DELETE_SCHEDULE_ERROR'
+                )
+            );
         }
     },
 
@@ -70,7 +152,14 @@ module.exports = {
             );
             res.json(schedules);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get schedules by class failed', error, { classId });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve schedules for class.',
+                    null,
+                    'GET_CLASS_SCHEDULES_ERROR'
+                )
+            );
         }
     },
 };

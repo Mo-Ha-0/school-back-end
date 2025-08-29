@@ -1,4 +1,5 @@
 const { db } = require('../config/db');
+const { createErrorResponse, HTTP_STATUS, logError } = require('../api/utils/errorHandler');
 
 function hasPermission(...permissionNames) {
     // Support both hasPermission('perm') and hasPermission('perm1', 'perm2', ...)
@@ -10,8 +11,15 @@ function hasPermission(...permissionNames) {
         try {
             const user = req.user;
 
-            if (!user || !user.role_id)
-                return res.status(403).json({ error: 'No role assigned' });
+            if (!user || !user.role_id) {
+                return res.status(HTTP_STATUS.FORBIDDEN).json(
+                    createErrorResponse(
+                        'Access denied. No role assigned to user.',
+                        null,
+                        'NO_ROLE_ASSIGNED'
+                    )
+                );
+            }
 
             const result = await db('role_permissions')
                 .join(
@@ -28,11 +36,38 @@ function hasPermission(...permissionNames) {
             const hasAny = required.some((perm) =>
                 userPermissions.includes(perm)
             );
-            if (hasAny) return next();
-            return res.status(403).json({ error: 'Permission denied' });
+            
+            if (hasAny) {
+                return next();
+            }
+            
+            return res.status(HTTP_STATUS.FORBIDDEN).json(
+                createErrorResponse(
+                    `Access denied. Required permissions: ${required.join(', ')}`,
+                    {
+                        requiredPermissions: required,
+                        userPermissions: userPermissions
+                    },
+                    'INSUFFICIENT_PERMISSIONS'
+                )
+            );
         } catch (err) {
-            console.error('Permission check failed:', err.message);
-            res.status(500).json({ error: 'Server error' });
+            // Log the permission check error with context
+            logError('Permission check failed', err, {
+                userId: req.user?.id,
+                roleId: req.user?.role_id,
+                requiredPermissions: required,
+                path: req.originalUrl,
+                method: req.method
+            });
+            
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Permission check failed due to server error.',
+                    null,
+                    'PERMISSION_CHECK_ERROR'
+                )
+            );
         }
     };
 }

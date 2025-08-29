@@ -9,17 +9,27 @@ const { validationResult } = require('express-validator');
 const { db } = require('../../config/db');
 const { toDateOnly } = require('../utils/dateUtils');
 const { stripSensitive } = require('../utils/sanitize');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+    handleTransactionError,
+} = require('../utils/errorHandler');
 
 const bcrypt = require('bcrypt-nodejs');
 
 module.exports = {
     async createStudent(req, res) {
-        const { db } = require('../../config/db');
+        const trx = await db.transaction();
 
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                await trx.rollback();
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
 
             const {
@@ -31,35 +41,79 @@ module.exports = {
                 grade_level,
                 discount_percentage,
             } = req.body;
-            const password = userService.generateRandomPassword();
 
-            const hash = bcrypt.hashSync(password);
-            const role = await roleService.getRoleByName('student');
-            console.log(role);
-            if (!role || role.length == 0) {
+            // Validate required fields
+            if (
+                !name ||
+                !email ||
+                !phone ||
+                !birth_date ||
+                !class_id ||
+                !grade_level
+            ) {
+                await trx.rollback();
                 return res
-                    .status(400)
-                    .json({ msg: 'there is no role for student' });
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Missing required fields for student creation.',
+                            null,
+                            'MISSING_REQUIRED_FIELDS'
+                        )
+                    );
             }
+
+            const password = userService.generateRandomPassword();
+            const hash = bcrypt.hashSync(password);
+
+            // Get student role
+            const role = await roleService.getRoleByName('student');
+            if (!role || role.length === 0) {
+                await trx.rollback();
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Student role not found in system.',
+                            null,
+                            'ROLE_NOT_FOUND'
+                        )
+                    );
+            }
+
+            // Get curriculum
             const curriculum = await studentService.getCurriculumId(
                 grade_level
             );
-            console.log(curriculum);
-            // Using transaction
-            const result = await db.transaction(async (trx) => {
-                // Create user within transaction
-                const user = await userService.createUser(
-                    {
-                        name: name,
-                        birth_date: birth_date,
-                        email: email,
-                        phone: phone,
-                        role_id: role[0].id,
-                        password_hash: hash,
-                    },
-                    trx
-                );
-                if (user[0]) {
+            if (!curriculum) {
+                await trx.rollback();
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            `No curriculum found for grade level: ${grade_level}`,
+                            null,
+                            'CURRICULUM_NOT_FOUND'
+                        )
+                    );
+            }
+
+            // Create user within transaction
+            const user = await userService.createUser(
+                {
+                    name: name,
+                    birth_date: birth_date,
+                    email: email,
+                    phone: phone,
+                    role_id: role[0].id,
+                    password_hash: hash,
+                },
+                trx
+            );
+
+            // Send welcome message (non-blocking)
+            if (user[0]) {
+                try {
                     const sendMessage = await userService.sendWhatsAppMessage(
                         user[0].phone,
                         `🎓 Welcome to Our School!
@@ -78,66 +132,111 @@ You can now log in to your student portal and access your academic information.
 Best regards,
 School Administration Team`
                     );
-                    console.log(sendMessage);
+                } catch (msgError) {
+                    // Log but don't fail the transaction for WhatsApp errors
+                    logError('WhatsApp message failed', msgError, {
+                        userId: user[0].id,
+                    });
                 }
-                // Create student within the same transaction
-                const student = await studentService.createStudent(
-                    {
-                        user_id: user[0].id,
-                        class_id: class_id,
-                        curriculum_id: curriculum.id,
-                        grade_level: grade_level,
-                    },
-                    trx
-                );
-                const today = new Date().toISOString().split('T')[0];
-                let currentAcademicYear = await db('academic_years')
-                    .where('start_year', '<=', today)
-                    .andWhere('end_year', '>=', today)
+            }
+
+            // Create student within the same transaction
+            const student = await studentService.createStudent(
+                {
+                    user_id: user[0].id,
+                    class_id: class_id,
+                    curriculum_id: curriculum.id,
+                    grade_level: grade_level,
+                },
+                trx
+            );
+
+            // Handle academic year and tuition setup
+            const today = new Date().toISOString().split('T')[0];
+            let currentAcademicYear = await db('academic_years')
+                .where('start_year', '<=', today)
+                .andWhere('end_year', '>=', today)
+                .orderBy('start_year', 'desc')
+                .first()
+                .transacting(trx);
+
+            if (!currentAcademicYear) {
+                currentAcademicYear = await db('academic_years')
                     .orderBy('start_year', 'desc')
                     .first()
                     .transacting(trx);
-                if (!currentAcademicYear) {
-                    currentAcademicYear = await db('academic_years')
-                        .orderBy('start_year', 'desc')
-                        .first()
-                        .transacting(trx);
-                }
+            }
 
-                if (currentAcademicYear) {
-                    const fullTuition =
-                        Number(currentAcademicYear.full_tuition) || 0;
-                    const discount =
-                        typeof discount_percentage === 'number'
-                            ? discount_percentage
-                            : parseFloat(discount_percentage);
-                    const isValidDiscount =
-                        !isNaN(discount) && discount >= 0 && discount <= 100;
-                    const remainingTuition = isValidDiscount
-                        ? Number(
-                              (fullTuition * (1 - discount / 100)).toFixed(2)
-                          )
-                        : fullTuition;
+            if (currentAcademicYear) {
+                const fullTuition =
+                    Number(currentAcademicYear.full_tuition) || 0;
+                const discount =
+                    typeof discount_percentage === 'number'
+                        ? discount_percentage
+                        : parseFloat(discount_percentage) || 0;
+                const isValidDiscount =
+                    !isNaN(discount) && discount >= 0 && discount <= 100;
+                const remainingTuition = isValidDiscount
+                    ? Number((fullTuition * (1 - discount / 100)).toFixed(2))
+                    : fullTuition;
 
-                    await db('archives')
-                        .insert({
-                            student_id: student[0].id,
-                            academic_year_id: currentAcademicYear.id,
-                            remaining_tuition: remainingTuition,
-                        })
-                        .transacting(trx);
-                }
+                await db('archives')
+                    .insert({
+                        student_id: student[0].id,
+                        academic_year_id: currentAcademicYear.id,
+                        remaining_tuition: remainingTuition,
+                    })
+                    .transacting(trx);
+            }
 
-                return student;
+            await trx.commit();
+            res.status(HTTP_STATUS.CREATED).json({
+                student: student[0],
+                user_id: user[0].id,
+                message: 'Student created successfully',
             });
-
-            res.status(201).json(result);
         } catch (error) {
-            console.error('Transaction error:', error);
-            res.status(400).json({
-                error: error.message,
-                msg: 'Failed to create student. All changes rolled back.',
+            await handleTransactionError(trx, error, 'Create student');
+
+            // Handle specific database errors
+            if (error.code === '23505') {
+                return res
+                    .status(HTTP_STATUS.CONFLICT)
+                    .json(
+                        createErrorResponse(
+                            'A user with this email already exists.',
+                            null,
+                            'EMAIL_EXISTS'
+                        )
+                    );
+            }
+
+            if (error.code === '23503') {
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Invalid class_id or curriculum_id provided.',
+                            null,
+                            'INVALID_FOREIGN_KEY'
+                        )
+                    );
+            }
+
+            logError('Create student failed', error, {
+                email,
+                grade_level,
+                class_id,
+                createdBy: req.user?.id,
             });
+
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create student due to server error.',
+                    null,
+                    'CREATE_STUDENT_ERROR'
+                )
+            );
         }
     },
 
@@ -477,20 +576,40 @@ School Administration Team`
     async getStudentScoreCard(req, res) {
         try {
             const student = await studentService.findByUserId(req.user.id);
+            if (!student) {
+                return res.status(404).json({ error: 'Student not found' });
+            }
+
             const academic_year =
                 await academicYearService.findAllAccordingYearNow();
-            console.log(student, academic_year);
+            if (!academic_year) {
+                return res.status(404).json({
+                    error: 'No active academic year found for current date',
+                });
+            }
+            console.log('Academic year:', academic_year);
+
             const archive = await archiveService.findByAcademicYearId(
                 academic_year.id,
                 student.id
             );
-            console.log(archive);
+            if (!archive) {
+                return res.status(404).json({
+                    error: 'Student archive not found for current academic year',
+                });
+            }
+            console.log('Archive:', archive);
+
             const grades = await gradeService.findAllForStudent(archive.id);
-            console.log(grades);
-            if (!grades)
-                return res.status(404).json({ error: 'grades not found' });
+            console.log('Grades:', grades);
+            if (!grades || grades.length === 0) {
+                return res
+                    .status(404)
+                    .json({ error: 'No grades found for student' });
+            }
             res.json(grades);
         } catch (error) {
+            console.error('Error in getStudentScoreCard:', error);
             res.status(500).json({ error: error.message });
         }
     },

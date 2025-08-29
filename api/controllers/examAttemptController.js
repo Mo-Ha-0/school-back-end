@@ -7,20 +7,40 @@ const academicYearService = require('../services/academicYearService');
 const archiveService = require('../services/archiveService');
 const semesterService = require('../services/semesterService');
 const { validationResult } = require('express-validator');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+    handleTransactionError,
+} = require('../utils/errorHandler');
 
 module.exports = {
     async createExamAttempt(req, res) {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
             const ExamAttempt = await examAttemptService.createExamAttempt(
                 req.body
             );
-            res.status(201).json(ExamAttempt);
+            res.status(HTTP_STATUS.CREATED).json(ExamAttempt);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Create exam attempt failed', error, {
+                exam_id: req.body.exam_id,
+                student_id: req.body.student_id,
+                createdBy: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create exam attempt.',
+                    null,
+                    'CREATE_EXAM_ATTEMPT_ERROR'
+                )
+            );
         }
     },
 
@@ -29,13 +49,29 @@ module.exports = {
             const ExamAttempt = await examAttemptService.getExamAttempt(
                 req.params.id
             );
-            if (!ExamAttempt)
+            if (!ExamAttempt) {
                 return res
-                    .status(404)
-                    .json({ error: 'Exam Attempt not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam Attempt not found.',
+                            null,
+                            'EXAM_ATTEMPT_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(ExamAttempt);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get exam attempt failed', error, {
+                attemptId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve exam attempt.',
+                    null,
+                    'GET_EXAM_ATTEMPT_ERROR'
+                )
+            );
         }
     },
 
@@ -44,7 +80,14 @@ module.exports = {
             const ExamAttempts = await examAttemptService.getAllExamAttempts();
             res.json(ExamAttempts);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get all exam attempts failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve exam attempts.',
+                    null,
+                    'GET_EXAM_ATTEMPTS_ERROR'
+                )
+            );
         }
     },
 
@@ -54,13 +97,29 @@ module.exports = {
                 req.params.id,
                 req.body
             );
-            if (!ExamAttempt || ExamAttempt.length == 0)
+            if (!ExamAttempt || ExamAttempt.length == 0) {
                 return res
-                    .status(404)
-                    .json({ error: 'Exam Attempt not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam Attempt not found.',
+                            null,
+                            'EXAM_ATTEMPT_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(ExamAttempt);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Update exam attempt failed', error, {
+                attemptId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update exam attempt.',
+                    null,
+                    'UPDATE_EXAM_ATTEMPT_ERROR'
+                )
+            );
         }
     },
 
@@ -69,13 +128,31 @@ module.exports = {
             const result = await examAttemptService.deleteExamAttempt(
                 req.params.id
             );
-            if (!result)
+            if (!result) {
                 return res
-                    .status(404)
-                    .json({ error: 'Exam Attempt not found' });
-            res.status(200).json({ message: 'deleted successfuly' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam Attempt not found.',
+                            null,
+                            'EXAM_ATTEMPT_NOT_FOUND'
+                        )
+                    );
+            }
+            res.status(HTTP_STATUS.OK).json({
+                message: 'Exam attempt deleted successfully',
+            });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Delete exam attempt failed', error, {
+                attemptId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete exam attempt.',
+                    null,
+                    'DELETE_EXAM_ATTEMPT_ERROR'
+                )
+            );
         }
     },
 
@@ -84,7 +161,9 @@ module.exports = {
         // Get the Knex instance (usually from your app setup)
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json(handleValidationErrors(errors));
         }
         const { db } = require('../../config/db');
 
@@ -95,8 +174,14 @@ module.exports = {
             // Validate required fields
             if (!exam_id || !email || !answers) {
                 return res
-                    .status(400)
-                    .json({ error: 'Missing required fields' });
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Missing required fields',
+                            null,
+                            'MISSING_REQUIRED_FIELDS'
+                        )
+                    );
             }
 
             // Start transaction
@@ -113,11 +198,16 @@ module.exports = {
             console.log(existingAttempt);
             if (existingAttempt) {
                 await trx.rollback();
-                return res.status(400).json({
-                    error: 'You have already taken this exam',
-                    previous_score: existingAttempt.score,
-                    previous_attempt_id: existingAttempt.id,
-                });
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(
+                    createErrorResponse(
+                        'You have already taken this exam',
+                        {
+                            previous_score: existingAttempt.score,
+                            previous_attempt_id: existingAttempt.id,
+                        },
+                        'EXAM_ALREADY_TAKEN'
+                    )
+                );
             }
 
             const examAttempt = await examAttemptService.createExamAttempt(
@@ -133,7 +223,15 @@ module.exports = {
 
             if (!exam) {
                 await trx.rollback();
-                return res.status(404).json({ error: 'Exam not found' });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam not found',
+                            null,
+                            'EXAM_NOT_FOUND'
+                        )
+                    );
             }
 
             let totalScore = 0;
@@ -260,11 +358,17 @@ module.exports = {
             // Rollback transaction if any error occurs
             if (trx) await trx.rollback();
 
-            console.error('Error in gradeExam:', error);
-            res.status(500).json({
-                error: 'Internal server error',
-                message: error.message,
+            logError('Grade exam failed', error, {
+                exam_id: req.body.exam_id,
+                email: req.body.email,
             });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to grade exam due to server error.',
+                    null,
+                    'GRADE_EXAM_ERROR'
+                )
+            );
         }
     },
 };

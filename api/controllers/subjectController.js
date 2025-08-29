@@ -1,7 +1,12 @@
 const subjectService = require('../services/subjectService');
 const { db } = require('../../config/db');
-
 const { validationResult } = require('express-validator');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+} = require('../utils/errorHandler');
 
 const bcrypt = require('bcrypt-nodejs');
 module.exports = {
@@ -9,7 +14,9 @@ module.exports = {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
             const { level_grade } = req.body;
             const curriculum = await db('curriculums')
@@ -17,29 +24,62 @@ module.exports = {
                 .where({ level_grade: String(level_grade), is_active: true })
                 .first();
             if (!curriculum) {
-                return res.status(404).json({
-                    error: 'Curriculum not found for provided level_grade',
-                });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Curriculum not found for provided level_grade.',
+                            null,
+                            'CURRICULUM_NOT_FOUND'
+                        )
+                    );
             }
 
             req.body.curriculum_id = curriculum.id;
             delete req.body.level_grade;
 
             const Subject = await subjectService.createSubject(req.body);
-            res.status(201).json(Subject);
+            res.status(HTTP_STATUS.CREATED).json(Subject);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Create subject failed', error, {
+                level_grade: req.body.level_grade,
+                createdBy: req.user?.id,
+            });
+
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create subject due to server error.',
+                    null,
+                    'CREATE_SUBJECT_ERROR'
+                )
+            );
         }
     },
 
     async getSubject(req, res) {
         try {
             const Subject = await subjectService.getSubject(req.params.id);
-            if (!Subject)
-                return res.status(404).json({ error: 'Subject not found' });
+            if (!Subject) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Subject not found.',
+                            null,
+                            'SUBJECT_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(Subject);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get subject failed', error, { subjectId: req.params.id });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve subject.',
+                    null,
+                    'GET_SUBJECT_ERROR'
+                )
+            );
         }
     },
 
@@ -48,7 +88,14 @@ module.exports = {
             const Subject = await subjectService.getAllSubjectes();
             res.json(Subject);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get all subjects failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve subjects.',
+                    null,
+                    'GET_SUBJECTS_ERROR'
+                )
+            );
         }
     },
 
@@ -62,8 +109,14 @@ module.exports = {
 
             if (!studentCurriculum) {
                 return res
-                    .status(404)
-                    .json({ error: 'Student record not found for this user' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Student record not found for this user.',
+                            null,
+                            'STUDENT_NOT_FOUND'
+                        )
+                    );
             }
             const subjects = await db('subjects')
                 .select('*')
@@ -71,7 +124,14 @@ module.exports = {
 
             res.json(subjects);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get student subjects failed', error, { userId });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve student subjects.',
+                    null,
+                    'GET_STUDENT_SUBJECTS_ERROR'
+                )
+            );
         }
     },
 
@@ -88,9 +148,15 @@ module.exports = {
                     })
                     .first();
                 if (!curriculum) {
-                    return res.status(404).json({
-                        error: 'Curriculum not found for provided level_grade',
-                    });
+                    return res
+                        .status(HTTP_STATUS.NOT_FOUND)
+                        .json(
+                            createErrorResponse(
+                                'Curriculum not found for provided level_grade.',
+                                null,
+                                'CURRICULUM_NOT_FOUND'
+                            )
+                        );
                 }
 
                 req.body.curriculum_id = curriculum.id;
@@ -102,10 +168,27 @@ module.exports = {
                 req.body
             );
             if (!Subject || Subject.length == 0)
-                return res.status(404).json({ error: 'Subject not found' });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Subject not found.',
+                            null,
+                            'SUBJECT_NOT_FOUND'
+                        )
+                    );
             res.json(Subject);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Update subject failed', error, {
+                subjectId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update subject.',
+                    null,
+                    'UPDATE_SUBJECT_ERROR'
+                )
+            );
         }
     },
 
@@ -113,10 +196,27 @@ module.exports = {
         try {
             const result = await subjectService.deleteSubject(req.params.id);
             if (!result)
-                return res.status(404).json({ error: 'Subject not found' });
-            res.status(200).json({ message: 'deleted successfuly' });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Subject not found.',
+                            null,
+                            'SUBJECT_NOT_FOUND'
+                        )
+                    );
+            res.status(HTTP_STATUS.OK).json({ message: 'deleted successfuly' });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Delete subject failed', error, {
+                subjectId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete subject.',
+                    null,
+                    'DELETE_SUBJECT_ERROR'
+                )
+            );
         }
     },
 
@@ -126,7 +226,14 @@ module.exports = {
 
             res.json(Subjects);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get subjects list failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve subjects list.',
+                    null,
+                    'GET_SUBJECTS_LIST_ERROR'
+                )
+            );
         }
     },
 };
