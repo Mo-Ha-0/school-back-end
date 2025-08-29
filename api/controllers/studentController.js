@@ -576,7 +576,7 @@ School Administration Team`
     async getStudentScoreCard(req, res) {
         try {
             const student = await studentService.findByUserId(req.user.id);
-            console.log(student,req.user)
+            console.log(student, req.user);
             if (!student) {
                 return res.status(404).json({ error: 'Student not found' });
             }
@@ -684,8 +684,34 @@ School Administration Team`
                 );
             }
 
-            // Get total count for pagination
-            const countQuery = searchQuery.clone();
+            // Get total count for pagination - create a separate count query to avoid GROUP BY issues
+            const countQuery = db('students')
+                .join('users', 'students.user_id', 'users.id')
+                .join('classes', 'students.class_id', 'classes.id')
+                .join(
+                    'curriculums',
+                    'students.curriculum_id',
+                    'curriculums.id'
+                );
+
+            // Apply the same filters to count query
+            if (query) {
+                countQuery.where(function () {
+                    this.where('users.name', 'like', `%${query}%`)
+                        .orWhere('users.email', 'like', `%${query}%`)
+                        .orWhere('users.phone', 'like', `%${query}%`);
+                });
+            }
+            if (class_id) {
+                countQuery.where('students.class_id', class_id);
+            }
+            if (grade_level) {
+                countQuery.where('students.grade_level', grade_level);
+            }
+            if (is_active !== undefined) {
+                countQuery.where('users.is_active', is_active === 'true');
+            }
+
             const totalResult = await countQuery.count('* as total');
             const total = parseInt(totalResult[0].total, 10);
 
@@ -727,9 +753,7 @@ School Administration Team`
                 email,
                 phone,
                 class_name,
-                curriculum_name,
                 grade_level,
-                is_active,
                 birth_date_from,
                 birth_date_to,
                 created_date_from,
@@ -738,8 +762,7 @@ School Administration Team`
                 pageSize = 10,
                 sortBy = 'name',
                 sortOrder = 'asc',
-            } = req.query;
-
+            } = req.body;
             let searchQuery = db('students')
                 .join('users', 'students.user_id', 'users.id')
                 .join('classes', 'students.class_id', 'classes.id')
@@ -752,12 +775,9 @@ School Administration Team`
                     'users.email',
                     'users.phone',
                     'users.birth_date',
-                    'users.is_active',
                     'users.created_at as user_created_at',
-                    'classes.name as class_name',
-                    'curriculums.name as curriculum_name'
+                    'classes.class_name as class_name'
                 );
-
             // Apply advanced filters
             if (name) {
                 searchQuery = searchQuery.where(
@@ -785,17 +805,9 @@ School Administration Team`
 
             if (class_name) {
                 searchQuery = searchQuery.where(
-                    'classes.name',
+                    'classes.class_name',
                     'like',
                     `%${class_name}%`
-                );
-            }
-
-            if (curriculum_name) {
-                searchQuery = searchQuery.where(
-                    'curriculums.name',
-                    'like',
-                    `%${curriculum_name}%`
                 );
             }
 
@@ -803,13 +815,6 @@ School Administration Team`
                 searchQuery = searchQuery.where(
                     'students.grade_level',
                     grade_level
-                );
-            }
-
-            if (is_active !== undefined) {
-                searchQuery = searchQuery.where(
-                    'users.is_active',
-                    is_active === 'true'
                 );
             }
 
@@ -845,15 +850,85 @@ School Administration Team`
                 );
             }
 
-            // Get total count
-            const countQuery = searchQuery.clone();
+            // Get total count - create a separate count query to avoid GROUP BY issues
+            const countQuery = db('students')
+                .join('users', 'students.user_id', 'users.id')
+                .join('classes', 'students.class_id', 'classes.id')
+                .join(
+                    'curriculums',
+                    'students.curriculum_id',
+                    'curriculums.id'
+                );
+
+            // Apply the same filters to count query
+            if (name) {
+                countQuery.where('users.name', 'like', `%${name}%`);
+            }
+            if (email) {
+                countQuery.where('users.email', 'like', `%${email}%`);
+            }
+            if (phone) {
+                countQuery.where('users.phone', 'like', `%${phone}%`);
+            }
+            if (class_name) {
+                countQuery.where(
+                    'classes.class_name',
+                    'like',
+                    `%${class_name}%`
+                );
+            }
+            if (grade_level) {
+                countQuery.where('students.grade_level', grade_level);
+            }
+            if (birth_date_from) {
+                countQuery.where('users.birth_date', '>=', birth_date_from);
+            }
+            if (birth_date_to) {
+                countQuery.where('users.birth_date', '<=', birth_date_to);
+            }
+            if (created_date_from) {
+                countQuery.where('users.created_at', '>=', created_date_from);
+            }
+            if (created_date_to) {
+                countQuery.where('users.created_at', '<=', created_date_to);
+            }
+
             const totalResult = await countQuery.count('* as total');
             const total = parseInt(totalResult[0].total, 10);
+
+            // Validate sortBy field to prevent SQL injection and ensure valid field
+            const allowedSortFields = [
+                'name',
+                'email',
+                'phone',
+                'grade_level',
+                'created_at',
+                'birth_date',
+            ];
+
+            // Map sortBy to actual database field names
+            const sortFieldMap = {
+                name: 'users.name',
+                email: 'users.email',
+                phone: 'users.phone',
+                grade_level: 'students.grade_level',
+                created_at: 'users.created_at',
+                birth_date: 'users.birth_date',
+            };
+
+            const validSortBy = allowedSortFields.includes(sortBy)
+                ? sortFieldMap[sortBy]
+                : 'users.name';
+            const validSortOrder = ['asc', 'desc'].includes(
+                sortOrder.toLowerCase()
+            )
+                ? sortOrder.toLowerCase()
+                : 'asc';
 
             // Apply sorting and pagination
             const offset = (page - 1) * pageSize;
             const students = await searchQuery
-                .orderBy(sortBy, sortOrder)
+                .orderBy(validSortBy, validSortOrder)
                 .limit(pageSize)
                 .offset(offset);
 
@@ -878,9 +953,7 @@ School Administration Team`
                     email,
                     phone,
                     class_name,
-                    curriculum_name,
                     grade_level,
-                    is_active,
                     birth_date_from,
                     birth_date_to,
                     created_date_from,
