@@ -576,6 +576,7 @@ School Administration Team`
     async getStudentScoreCard(req, res) {
         try {
             const student = await studentService.findByUserId(req.user.id);
+            console.log(student,req.user)
             if (!student) {
                 return res.status(404).json({ error: 'Student not found' });
             }

@@ -34,6 +34,7 @@ class Student {
                 's.id',
                 'u.name as student_name',
                 'u.email',
+                's.user_id',
                 'u.phone',
                 'u.birth_date',
                 's.class_id',
