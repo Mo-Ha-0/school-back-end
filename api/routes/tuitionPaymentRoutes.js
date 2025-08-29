@@ -60,7 +60,7 @@ router.get(
 );
 
 // Get outstanding payments
-router.get(
+router.post(
     '/outstanding',
     hasPermission('get_tuition_payments'),
     tuitionPaymentController.getOutstandingPayments

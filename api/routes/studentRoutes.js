@@ -37,7 +37,7 @@ router.get(
     studentController.searchStudents
 );
 
-router.get(
+router.post(
     '/search/advanced',
     authMiddleware,
     hasPermission('get_students'),
