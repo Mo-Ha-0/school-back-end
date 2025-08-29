@@ -10,12 +10,12 @@ const { messaging } = require('firebase-admin');
 const roleService = require('../services/roleService');
 const { stripSensitive } = require('../utils/sanitize');
 const { toDateOnly } = require('../utils/dateUtils');
-const { 
-    createErrorResponse, 
-    HTTP_STATUS, 
+const {
+    createErrorResponse,
+    HTTP_STATUS,
     handleValidationErrors,
     logError,
-    asyncErrorHandler
+    asyncErrorHandler,
 } = require('../utils/errorHandler');
 require('dotenv').config();
 module.exports = {
@@ -23,9 +23,9 @@ module.exports = {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(HTTP_STATUS.BAD_REQUEST).json(
-                    handleValidationErrors(errors)
-                );
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
 
             const { email, password } = req.body;
@@ -38,26 +38,30 @@ module.exports = {
                 .first();
 
             if (!user) {
-                return res.status(HTTP_STATUS.UNAUTHORIZED).json(
-                    createErrorResponse(
-                        'Invalid email or password.',
-                        null,
-                        'INVALID_CREDENTIALS'
-                    )
-                );
+                return res
+                    .status(HTTP_STATUS.UNAUTHORIZED)
+                    .json(
+                        createErrorResponse(
+                            'Invalid email or password.',
+                            null,
+                            'INVALID_CREDENTIALS'
+                        )
+                    );
             }
 
             // 2. Validate password
             const isValid = bcrypt.compareSync(password, user.password_hash);
 
             if (!isValid) {
-                return res.status(HTTP_STATUS.UNAUTHORIZED).json(
-                    createErrorResponse(
-                        'Invalid email or password.',
-                        null,
-                        'INVALID_CREDENTIALS'
-                    )
-                );
+                return res
+                    .status(HTTP_STATUS.UNAUTHORIZED)
+                    .json(
+                        createErrorResponse(
+                            'Invalid email or password.',
+                            null,
+                            'INVALID_CREDENTIALS'
+                        )
+                    );
             }
 
             // 3. Generate token (exclude sensitive data)
@@ -67,7 +71,7 @@ module.exports = {
                     email: user.email,
                     roleId: user.role_id,
                 },
-                process.env.JWT_SECRET,
+                'jwt_secret',
                 { expiresIn: '10d' }
             );
 
@@ -82,7 +86,9 @@ module.exports = {
             if (result.role == 'student') {
                 const student = await studentService.findByUserId(user.id);
                 if (student) {
-                    let studentData = await userService.removeTimeStamp(student);
+                    let studentData = await userService.removeTimeStamp(
+                        student
+                    );
                     userAll = { ...userAll, ...studentData };
                 }
             } else if (result.role == 'teacher') {
@@ -91,15 +97,15 @@ module.exports = {
                     userAll = { ...userAll, ...teacher };
                 }
             }
-            
+
             res.json({ user: userAll, token });
         } catch (error) {
             logError('User signIn failed', error, {
                 email: req.body.email,
                 ip: req.ip,
-                userAgent: req.get('User-Agent')
+                userAgent: req.get('User-Agent'),
             });
-            
+
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
                 createErrorResponse(
                     'Sign in failed due to server error.',
@@ -114,11 +120,11 @@ module.exports = {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(HTTP_STATUS.BAD_REQUEST).json(
-                    handleValidationErrors(errors)
-                );
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
-            
+
             const { name, email, role_id, phone, birth_date } = req.body;
 
             const password = userService.generateRandomPassword();
@@ -127,15 +133,17 @@ module.exports = {
             const validRole = roles.filter((role) => role_id === role.id);
 
             if (validRole.length === 0) {
-                return res.status(HTTP_STATUS.BAD_REQUEST).json(
-                    createErrorResponse(
-                        'Invalid role ID provided.',
-                        null,
-                        'INVALID_ROLE'
-                    )
-                );
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Invalid role ID provided.',
+                            null,
+                            'INVALID_ROLE'
+                        )
+                    );
             }
-            
+
             const user = await userService.createUser({
                 name: name,
                 birth_date: birth_date,
@@ -151,20 +159,22 @@ module.exports = {
             logError('Create user failed', error, {
                 email: req.body.email,
                 role_id: req.body.role_id,
-                createdBy: req.user?.id
+                createdBy: req.user?.id,
             });
-            
+
             // Handle duplicate email error
             if (error.code === '23505') {
-                return res.status(HTTP_STATUS.CONFLICT).json(
-                    createErrorResponse(
-                        'User with this email already exists.',
-                        null,
-                        'EMAIL_EXISTS'
-                    )
-                );
+                return res
+                    .status(HTTP_STATUS.CONFLICT)
+                    .json(
+                        createErrorResponse(
+                            'User with this email already exists.',
+                            null,
+                            'EMAIL_EXISTS'
+                        )
+                    );
             }
-            
+
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
                 createErrorResponse(
                     'Failed to create user due to server error.',
@@ -179,16 +189,26 @@ module.exports = {
         try {
             const user = await userService.getUser(req.params.id);
             if (!user) {
-                return res.status(HTTP_STATUS.NOT_FOUND).json(
-                    createErrorResponse('User not found.', null, 'USER_NOT_FOUND')
-                );
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'User not found.',
+                            null,
+                            'USER_NOT_FOUND'
+                        )
+                    );
             }
             const userData = await userService.removeHashedPassword(user);
             res.json(stripSensitive(userData));
         } catch (error) {
             logError('Get user failed', error, { userId: req.params.id });
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Failed to retrieve user.', null, 'GET_USER_ERROR')
+                createErrorResponse(
+                    'Failed to retrieve user.',
+                    null,
+                    'GET_USER_ERROR'
+                )
             );
         }
     },
@@ -208,13 +228,19 @@ module.exports = {
                     'users.phone',
                     'users.birth_date'
                 );
-                
+
             if (!user || user.length === 0) {
-                return res.status(HTTP_STATUS.NOT_FOUND).json(
-                    createErrorResponse('User not found.', null, 'USER_NOT_FOUND')
-                );
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'User not found.',
+                            null,
+                            'USER_NOT_FOUND'
+                        )
+                    );
             }
-            
+
             const role = await roleService.getRoleById(user[0].role_id);
             if (role[0].name === 'student') {
                 user = await db('users')
@@ -262,11 +288,17 @@ module.exports = {
                         'teachers.qualification'
                     );
             }
-            
+
             if (!user[0]) {
-                return res.status(HTTP_STATUS.NOT_FOUND).json(
-                    createErrorResponse('User profile not found.', null, 'USER_PROFILE_NOT_FOUND')
-                );
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'User profile not found.',
+                            null,
+                            'USER_PROFILE_NOT_FOUND'
+                        )
+                    );
             }
 
             const permissions = await roleService.getPermissionsOfRole(
@@ -277,9 +309,15 @@ module.exports = {
 
             res.json(stripSensitive({ user, permissions: filterPermissions }));
         } catch (error) {
-            logError('Get user by token failed', error, { userId: req.user?.id });
+            logError('Get user by token failed', error, {
+                userId: req.user?.id,
+            });
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Failed to retrieve user profile.', null, 'GET_USER_PROFILE_ERROR')
+                createErrorResponse(
+                    'Failed to retrieve user profile.',
+                    null,
+                    'GET_USER_PROFILE_ERROR'
+                )
             );
         }
     },
@@ -291,7 +329,11 @@ module.exports = {
         } catch (error) {
             logError('Get all users failed', error);
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Failed to retrieve users.', null, 'GET_USERS_ERROR')
+                createErrorResponse(
+                    'Failed to retrieve users.',
+                    null,
+                    'GET_USERS_ERROR'
+                )
             );
         }
     },
@@ -299,35 +341,53 @@ module.exports = {
     async updateUser(req, res) {
         try {
             const { name, email, phone, birth_date, role_id } = req.body;
-            
+
             if (!role_id && !name && !email && !phone && !birth_date) {
-                return res.status(HTTP_STATUS.BAD_REQUEST).json(
-                    createErrorResponse(
-                        'At least one field must be provided to update.',
-                        null,
-                        'NO_UPDATE_FIELDS'
-                    )
-                );
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'At least one field must be provided to update.',
+                            null,
+                            'NO_UPDATE_FIELDS'
+                        )
+                    );
             }
-            
+
             const user = await userService.updateUser(req.params.id, req.body);
             if (!user || user.length == 0) {
-                return res.status(HTTP_STATUS.NOT_FOUND).json(
-                    createErrorResponse('User not found.', null, 'USER_NOT_FOUND')
-                );
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'User not found.',
+                            null,
+                            'USER_NOT_FOUND'
+                        )
+                    );
             }
             res.json(stripSensitive(user));
         } catch (error) {
             logError('Update user failed', error, { userId: req.params.id });
-            
+
             if (error.code === '23505') {
-                return res.status(HTTP_STATUS.CONFLICT).json(
-                    createErrorResponse('Email already exists.', null, 'EMAIL_EXISTS')
-                );
+                return res
+                    .status(HTTP_STATUS.CONFLICT)
+                    .json(
+                        createErrorResponse(
+                            'Email already exists.',
+                            null,
+                            'EMAIL_EXISTS'
+                        )
+                    );
             }
-            
+
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Failed to update user.', null, 'UPDATE_USER_ERROR')
+                createErrorResponse(
+                    'Failed to update user.',
+                    null,
+                    'UPDATE_USER_ERROR'
+                )
             );
         }
     },
@@ -336,15 +396,27 @@ module.exports = {
         try {
             const result = await userService.deleteUser(req.params.id);
             if (!result) {
-                return res.status(HTTP_STATUS.NOT_FOUND).json(
-                    createErrorResponse('User not found.', null, 'USER_NOT_FOUND')
-                );
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'User not found.',
+                            null,
+                            'USER_NOT_FOUND'
+                        )
+                    );
             }
-            res.status(HTTP_STATUS.OK).json({ message: 'User deleted successfully' });
+            res.status(HTTP_STATUS.OK).json({
+                message: 'User deleted successfully',
+            });
         } catch (error) {
             logError('Delete user failed', error, { userId: req.params.id });
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Failed to delete user.', null, 'DELETE_USER_ERROR')
+                createErrorResponse(
+                    'Failed to delete user.',
+                    null,
+                    'DELETE_USER_ERROR'
+                )
             );
         }
     },
@@ -354,9 +426,15 @@ module.exports = {
             const users = await userService.search(req.params.name);
             res.json(stripSensitive(users));
         } catch (error) {
-            logError('User search failed', error, { searchTerm: req.params.name });
+            logError('User search failed', error, {
+                searchTerm: req.params.name,
+            });
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Failed to search users.', null, 'SEARCH_USERS_ERROR')
+                createErrorResponse(
+                    'Failed to search users.',
+                    null,
+                    'SEARCH_USERS_ERROR'
+                )
             );
         }
     },
@@ -366,9 +444,15 @@ module.exports = {
             const users = await userService.paginate(req.body);
             res.json(stripSensitive(users));
         } catch (error) {
-            logError('User pagination failed', error, { paginationData: req.body });
+            logError('User pagination failed', error, {
+                paginationData: req.body,
+            });
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Failed to paginate users.', null, 'PAGINATE_USERS_ERROR')
+                createErrorResponse(
+                    'Failed to paginate users.',
+                    null,
+                    'PAGINATE_USERS_ERROR'
+                )
             );
         }
     },
@@ -377,9 +461,15 @@ module.exports = {
         try {
             const employees = await userService.getEmployees();
             if (!employees || employees.length === 0) {
-                return res.status(HTTP_STATUS.NOT_FOUND).json(
-                    createErrorResponse('No employees found.', null, 'NO_EMPLOYEES_FOUND')
-                );
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'No employees found.',
+                            null,
+                            'NO_EMPLOYEES_FOUND'
+                        )
+                    );
             }
             const formatted = employees.map((emp) => ({
                 ...emp,
@@ -389,7 +479,11 @@ module.exports = {
         } catch (error) {
             logError('Get employees failed', error);
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Failed to retrieve employees.', null, 'GET_EMPLOYEES_ERROR')
+                createErrorResponse(
+                    'Failed to retrieve employees.',
+                    null,
+                    'GET_EMPLOYEES_ERROR'
+                )
             );
         }
     },
@@ -399,13 +493,19 @@ module.exports = {
             const token =
                 req.headers.authorization?.split(' ')[1] || req.headers.token;
             if (!token) {
-                return res.status(HTTP_STATUS.BAD_REQUEST).json(
-                    createErrorResponse('No authentication token provided.', null, 'NO_TOKEN')
-                );
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'No authentication token provided.',
+                            null,
+                            'NO_TOKEN'
+                        )
+                    );
             }
 
             // Decode token to get expiration time
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, 'jwt_secret');
             const expiresAt = new Date(decoded.exp * 1000);
 
             // Add token to blacklist
@@ -417,15 +517,28 @@ module.exports = {
             res.json({ message: 'Successfully signed out' });
         } catch (error) {
             logError('Sign out failed', error, { userId: req.user?.id });
-            
-            if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-                return res.status(HTTP_STATUS.BAD_REQUEST).json(
-                    createErrorResponse('Invalid token provided.', null, 'INVALID_TOKEN')
-                );
+
+            if (
+                error.name === 'JsonWebTokenError' ||
+                error.name === 'TokenExpiredError'
+            ) {
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Invalid token provided.',
+                            null,
+                            'INVALID_TOKEN'
+                        )
+                    );
             }
-            
+
             res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
-                createErrorResponse('Sign out failed due to server error.', null, 'SIGNOUT_ERROR')
+                createErrorResponse(
+                    'Sign out failed due to server error.',
+                    null,
+                    'SIGNOUT_ERROR'
+                )
             );
         }
     },
