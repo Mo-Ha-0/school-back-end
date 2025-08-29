@@ -25,6 +25,10 @@ exports.seed = async function (knex) {
         await knex('tuition_payments').del();
         await knex('behaviors').del();
         await knex('attendance_students').del();
+        await knex('attendance_teachers').del();
+        await knex('attendance_employees').del();
+        await knex('notifications').del();
+        await knex('fcm_tokens').del();
         await knex('answers').del();
         await knex('exam_attempts').del();
         await knex('grades').del();
@@ -34,9 +38,9 @@ exports.seed = async function (knex) {
         await knex('exams').del();
         await knex('archives').del();
         await knex('schedules').del();
+        await knex('teachers_subjects').del();
         await knex('periods').del();
         await knex('days').del();
-        await knex('teachers_subjects').del();
         await knex('subjects').del();
         await knex('students').del();
         await knex('teachers').del();
@@ -400,13 +404,23 @@ exports.seed = async function (knex) {
 
         // Create Academic Years
         const currentYear = new Date().getFullYear();
+        const currentDate = new Date();
         const academicYears = [];
-        for (let i = 0; i < 3; i++) {
+
+        // Ensure we have an academic year that covers the current date
+        academicYears.push({
+            start_year: `${currentYear}-01-01`,
+            end_year: `${currentYear + 1}-12-31`,
+            full_tuition: faker.number.int({ min: 8000, max: 15000 }),
+        });
+
+        // Add additional academic years for testing
+        for (let i = 1; i < 3; i++) {
             const startYear = currentYear - i;
             const endYear = startYear + 1;
             academicYears.push({
-                start_year: `${startYear}-09-01`,
-                end_year: `${endYear}-06-30`,
+                start_year: `${startYear}-01-01`,
+                end_year: `${endYear}-12-31`,
                 full_tuition: faker.number.int({ min: 8000, max: 15000 }),
             });
         }
@@ -421,20 +435,20 @@ exports.seed = async function (knex) {
             const yearId = academicYear.id || academicYear;
             const startYear = currentYear - i;
 
-            // Fall Semester
+            // First Semester (Jan-Jun)
             semesters.push({
                 academic_year_id: yearId,
                 semester_name: 'first_semester',
-                start_date: `${startYear}-09-01`,
-                end_date: `${startYear + 1}-01-31`,
+                start_date: `${startYear}-01-01`,
+                end_date: `${startYear}-06-30`,
             });
 
-            // Spring Semester
+            // Second Semester (Jul-Dec)
             semesters.push({
                 academic_year_id: yearId,
                 semester_name: 'second_semester',
-                start_date: `${startYear + 1}-02-01`,
-                end_date: `${startYear + 1}-06-30`,
+                start_date: `${startYear}-07-01`,
+                end_date: `${startYear}-12-31`,
             });
         }
         const semesterIds = await knex('semesters')
@@ -726,18 +740,19 @@ exports.seed = async function (knex) {
             const student = students[i];
             const studentId = studentRecordIds[i].id || studentRecordIds[i];
 
-            // Create archive for current year
-            const currentAcademicYear =
-                academicYearIds[0].id || academicYearIds[0];
-            archives.push({
-                student_id: studentId,
-                academic_year_id: currentAcademicYear,
-                remaining_tuition: faker.number.float({
-                    min: 0,
-                    max: 3000,
-                    fractionDigits: 2,
-                }),
-            });
+            // Create archive for ALL academic years to ensure coverage
+            for (const academicYear of academicYearIds) {
+                const academicYearId = academicYear.id || academicYear;
+                archives.push({
+                    student_id: studentId,
+                    academic_year_id: academicYearId,
+                    remaining_tuition: faker.number.float({
+                        min: 0,
+                        max: 3000,
+                        fractionDigits: 2,
+                    }),
+                });
+            }
         }
         const archiveIds = await knex('archives')
             .insert(archives)
@@ -1076,12 +1091,194 @@ exports.seed = async function (knex) {
         }
         await knex('behaviors').insert(behaviors);
 
-        // Create Attendance Records (MASSIVE expansion for comprehensive testing)
-        const attendanceRecords = [];
+        // ================================================================
+        // PHASE 6A: CREATE DAYS AND PERIODS (MISSING CRITICAL DATA)
+        // ================================================================
+        console.log(
+            '\n📅 Phase 6A: Creating days and periods for scheduling...'
+        );
+
+        // Create Days of the Week
+        const days = [
+            { name: 'sunday' },
+            { name: 'monday' },
+            { name: 'tuesday' },
+            { name: 'wedenesday' }, // Note: keeping the typo from migration
+            { name: 'thursday' },
+        ];
+        const dayIds = await knex('days').insert(days).returning('id');
+
+        // Create School Periods (Class time slots)
+        const periods = [
+            { start_time: '08:00:00', end_time: '08:45:00' }, // Period 1
+            { start_time: '08:50:00', end_time: '09:35:00' }, // Period 2
+            { start_time: '09:40:00', end_time: '10:25:00' }, // Period 3
+            { start_time: '10:30:00', end_time: '11:15:00' }, // Period 4 (before break)
+            { start_time: '11:30:00', end_time: '12:15:00' }, // Period 5 (after break)
+            { start_time: '12:20:00', end_time: '13:05:00' }, // Period 6
+            { start_time: '13:10:00', end_time: '13:55:00' }, // Period 7
+            { start_time: '14:00:00', end_time: '14:45:00' }, // Period 8
+        ];
+        const periodIds = await knex('periods').insert(periods).returning('id');
+
+        console.log(`✅ Created scheduling infrastructure:
+        - ${days.length} school days
+        - ${periods.length} class periods`);
+
+        // ================================================================
+        // PHASE 6B: CREATE TEACHER-SUBJECT RELATIONSHIPS (CRITICAL)
+        // ================================================================
+        console.log('\n👨‍🏫 Phase 6B: Creating teacher-subject assignments...');
+
+        const teacherSubjects = [];
+
+        // Assign teachers to subjects based on their specialization
+        for (let i = 0; i < teacherRecordIds.length; i++) {
+            const teacherId = teacherRecordIds[i].id || teacherRecordIds[i];
+            const teacher = teachers[i];
+
+            // Find subjects that match teacher's specialization
+            const matchingSubjects = subjectData.filter(
+                (subject) =>
+                    subject.name
+                        .toLowerCase()
+                        .includes(teacher.specialization.toLowerCase()) ||
+                    teacher.specialization
+                        .toLowerCase()
+                        .includes(subject.name.toLowerCase())
+            );
+
+            if (matchingSubjects.length > 0) {
+                // Assign teacher to their specialized subject
+                for (const subject of matchingSubjects) {
+                    const subjectIndex = subjectData.indexOf(subject);
+                    const subjectId =
+                        subjectIds[subjectIndex].id || subjectIds[subjectIndex];
+
+                    teacherSubjects.push({
+                        teacher_id: teacherId,
+                        subject_id: subjectId,
+                    });
+                }
+            } else {
+                // If no exact match, assign to a random subject
+                const randomSubjectIndex = Math.floor(
+                    Math.random() * subjectIds.length
+                );
+                const subjectId =
+                    subjectIds[randomSubjectIndex].id ||
+                    subjectIds[randomSubjectIndex];
+
+                teacherSubjects.push({
+                    teacher_id: teacherId,
+                    subject_id: subjectId,
+                });
+            }
+
+            // Also assign some teachers to multiple subjects (realistic)
+            if (Math.random() < 0.3) {
+                // 30% chance of teaching multiple subjects
+                const secondSubjectIndex = Math.floor(
+                    Math.random() * subjectIds.length
+                );
+                const secondSubjectId =
+                    subjectIds[secondSubjectIndex].id ||
+                    subjectIds[secondSubjectIndex];
+
+                // Avoid duplicate assignments
+                const alreadyAssigned = teacherSubjects.some(
+                    (ts) =>
+                        ts.teacher_id === teacherId &&
+                        ts.subject_id === secondSubjectId
+                );
+
+                if (!alreadyAssigned) {
+                    teacherSubjects.push({
+                        teacher_id: teacherId,
+                        subject_id: secondSubjectId,
+                    });
+                }
+            }
+        }
+
+        await knex('teachers_subjects').insert(teacherSubjects);
+
+        // ================================================================
+        // PHASE 6C: CREATE COMPREHENSIVE SCHEDULES
+        // ================================================================
+        console.log('\n🗓️ Phase 6C: Creating weekly class schedules...');
+
+        const schedules = [];
+
+        // Create schedules for each class
+        for (const classId of classIds) {
+            const classIdValue = classId.id || classId;
+
+            // For each day of the week
+            for (const dayId of dayIds) {
+                const dayIdValue = dayId.id || dayId;
+
+                // For each period (but not all periods every day)
+                const periodsToSchedule = periodIds.slice(0, 6); // Use first 6 periods
+
+                for (let p = 0; p < periodsToSchedule.length; p++) {
+                    const periodId =
+                        periodsToSchedule[p].id || periodsToSchedule[p];
+
+                    // Get a random subject for this time slot
+                    const subjectIndex =
+                        (classIdValue + dayIdValue + p) % subjectIds.length;
+                    const subjectId =
+                        subjectIds[subjectIndex].id || subjectIds[subjectIndex];
+
+                    // Find a teacher who teaches this subject
+                    const availableTeachers = teacherSubjects.filter(
+                        (ts) => ts.subject_id === subjectId
+                    );
+
+                    if (availableTeachers.length > 0) {
+                        const randomTeacher =
+                            faker.helpers.arrayElement(availableTeachers);
+
+                        schedules.push({
+                            class_id: classIdValue,
+                            subject_id: subjectId,
+                            day_id: dayIdValue,
+                            period_id: periodId,
+                            teacher_id: randomTeacher.teacher_id,
+                        });
+                    }
+                }
+            }
+        }
+
+        // Remove duplicates and insert
+        const uniqueSchedules = schedules.filter((schedule, index, self) => {
+            return (
+                index ===
+                self.findIndex(
+                    (s) =>
+                        s.class_id === schedule.class_id &&
+                        s.day_id === schedule.day_id &&
+                        s.period_id === schedule.period_id
+                )
+            );
+        });
+
+        await knex('schedules').insert(uniqueSchedules);
+
+        // ================================================================
+        // PHASE 6D: CREATE ATTENDANCE RECORDS (EXPANDED)
+        // ================================================================
+        console.log(
+            '\n📊 Phase 6D: Creating comprehensive attendance records...'
+        );
+
         const startDate = new Date(`${currentYear}-09-01`);
         const endDate = new Date(`${currentYear + 1}-05-30`); // Full school year
 
-        // Create attendance for 80% of students over 6 months (realistic dataset)
+        // STUDENT ATTENDANCE
+        const studentAttendanceRecords = [];
         const studentsWithAttendance = Math.floor(
             studentRecordIds.length * 0.8
         );
@@ -1092,7 +1289,6 @@ exports.seed = async function (knex) {
 
             // Generate attendance records for multiple days
             for (let day = 0; day < totalDays; day += 2) {
-                // Every other day to keep manageable
                 const attendanceDate = new Date(startDate);
                 attendanceDate.setDate(startDate.getDate() + day);
 
@@ -1100,7 +1296,7 @@ exports.seed = async function (knex) {
                     // Skip weekends (Saturday = 6, Sunday = 0)
                     const dayOfWeek = attendanceDate.getDay();
                     if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                        attendanceRecords.push({
+                        studentAttendanceRecords.push({
                             student_id: studentId,
                             created_by:
                                 teacherUserIds[
@@ -1110,16 +1306,80 @@ exports.seed = async function (knex) {
                                 ].id || teacherUserIds[0].id,
                             date: attendanceDate.toISOString().split('T')[0],
                             status: faker.helpers.weightedArrayElement([
-                                { weight: 85, value: 'present' }, // Most students present
-                                { weight: 10, value: 'absent' }, // Some absent
-                                { weight: 5, value: 'late' }, // Few late
+                                { weight: 85, value: 'present' },
+                                { weight: 10, value: 'absent' },
+                                { weight: 5, value: 'late' },
                             ]),
                         });
                     }
                 }
             }
         }
-        await knex('attendance_students').insert(attendanceRecords);
+        await knex('attendance_students').insert(studentAttendanceRecords);
+
+        // TEACHER ATTENDANCE
+        const teacherAttendanceRecords = [];
+        const teachersWithAttendance = Math.floor(
+            teacherRecordIds.length * 0.9
+        ); // 90% of teachers
+
+        for (let i = 0; i < teachersWithAttendance; i++) {
+            const teacherId = teacherRecordIds[i].id || teacherRecordIds[i];
+
+            // Generate attendance for 60 days
+            for (let day = 0; day < 60; day += 1) {
+                const attendanceDate = new Date(startDate);
+                attendanceDate.setDate(startDate.getDate() + day);
+
+                if (attendanceDate <= endDate) {
+                    const dayOfWeek = attendanceDate.getDay();
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                        teacherAttendanceRecords.push({
+                            teacher_id: teacherId,
+                            created_by: systemUserIds[0].id || systemUserIds[0], // Admin creates
+                            date: attendanceDate.toISOString().split('T')[0],
+                            status: faker.helpers.weightedArrayElement([
+                                { weight: 92, value: 'present' },
+                                { weight: 5, value: 'absent' },
+                                { weight: 3, value: 'late' },
+                            ]),
+                        });
+                    }
+                }
+            }
+        }
+        await knex('attendance_teachers').insert(teacherAttendanceRecords);
+
+        // EMPLOYEE ATTENDANCE (for managers and accountants)
+        const employeeAttendanceRecords = [];
+        const employeeUsers = systemUserIds.slice(-10); // Last 10 are managers + accountants
+
+        for (const userId of employeeUsers) {
+            const userIdValue = userId.id || userId;
+
+            // Generate attendance for 80 days
+            for (let day = 0; day < 80; day += 1) {
+                const attendanceDate = new Date(startDate);
+                attendanceDate.setDate(startDate.getDate() + day);
+
+                if (attendanceDate <= endDate) {
+                    const dayOfWeek = attendanceDate.getDay();
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                        employeeAttendanceRecords.push({
+                            user_id: userIdValue,
+                            created_by: systemUserIds[0].id || systemUserIds[0], // Admin creates
+                            date: attendanceDate.toISOString().split('T')[0],
+                            status: faker.helpers.weightedArrayElement([
+                                { weight: 95, value: 'present' },
+                                { weight: 3, value: 'absent' },
+                                { weight: 2, value: 'late' },
+                            ]),
+                        });
+                    }
+                }
+            }
+        }
+        await knex('attendance_employees').insert(employeeAttendanceRecords);
 
         // Create Tuition Payments (EXPANDED for comprehensive testing)
         const tuitionPayments = [];
@@ -1163,15 +1423,197 @@ exports.seed = async function (knex) {
         }
         await knex('tuition_payments').insert(tuitionPayments);
 
+        // ================================================================
+        // PHASE 6E: CREATE NOTIFICATIONS (MISSING DATA)
+        // ================================================================
+        console.log('\n📢 Phase 6E: Creating notifications for all users...');
+
+        const notifications = [];
+        const allUserIds = [...systemUserIds, ...schoolUserIds];
+
+        // Notification templates
+        const notificationTemplates = {
+            student: [
+                {
+                    title: '📚 New Assignment Posted',
+                    body: 'Your teacher has posted a new assignment in Mathematics. Due date: Next Friday.',
+                },
+                {
+                    title: '📝 Exam Reminder',
+                    body: 'You have an upcoming exam in Physics on Monday at 10:00 AM. Please prepare accordingly.',
+                },
+                {
+                    title: '🎉 Grade Published',
+                    body: 'Your grade for the recent Chemistry quiz has been published. Check your score card for details.',
+                },
+                {
+                    title: '⚠️ Attendance Notice',
+                    body: 'Please note that you have been marked absent for 3 consecutive days. Contact your teacher if this is an error.',
+                },
+                {
+                    title: '💰 Payment Reminder',
+                    body: 'Your tuition payment for this semester is due in 5 days. Please make the payment to avoid late fees.',
+                },
+            ],
+            teacher: [
+                {
+                    title: '📋 Grade Submission Reminder',
+                    body: 'Please submit grades for your recent Mathematics exam by Friday end of day.',
+                },
+                {
+                    title: '👨‍🎓 Student Query',
+                    body: 'A student from Grade 10-A has submitted a question about the assignment. Please review and respond.',
+                },
+                {
+                    title: '📅 Schedule Update',
+                    body: 'Your teaching schedule for next week has been updated. Please check the new time slots.',
+                },
+                {
+                    title: '🏫 Faculty Meeting',
+                    body: 'Faculty meeting scheduled for tomorrow at 2:00 PM in the main conference room.',
+                },
+            ],
+            admin: [
+                {
+                    title: '📊 Monthly Report Ready',
+                    body: 'The monthly academic and financial report is now available for review in the admin dashboard.',
+                },
+                {
+                    title: '⚙️ System Maintenance',
+                    body: 'Scheduled system maintenance will occur this Sunday from 2:00 AM to 4:00 AM.',
+                },
+                {
+                    title: '👥 New Staff Orientation',
+                    body: 'New staff orientation session is scheduled for next Monday. Please prepare welcome materials.',
+                },
+            ],
+            general: [
+                {
+                    title: '🎊 School Event',
+                    body: 'Annual Science Fair will be held next month. Students can start preparing their projects.',
+                },
+                {
+                    title: '📢 Important Announcement',
+                    body: 'The school will be closed tomorrow due to a national holiday. Classes will resume the day after.',
+                },
+                {
+                    title: '🍽️ Cafeteria Menu Update',
+                    body: 'New healthy menu options are now available in the school cafeteria. Check out the fresh additions!',
+                },
+            ],
+        };
+
+        // Create notifications for all users
+        for (const userId of allUserIds) {
+            const userIdValue = userId.id || userId;
+
+            // Get user role to determine notification type
+            const user =
+                systemUsers.find(
+                    (u) =>
+                        u.role_id === adminRole.id &&
+                        userIdValue <= systemUserIds.length
+                ) ||
+                studentUsers.find(
+                    (_, idx) =>
+                        studentUserIds[idx] &&
+                        (studentUserIds[idx].id || studentUserIds[idx]) ===
+                            userIdValue
+                ) ||
+                teacherUsers.find(
+                    (_, idx) =>
+                        teacherUserIds[idx] &&
+                        (teacherUserIds[idx].id || teacherUserIds[idx]) ===
+                            userIdValue
+                );
+
+            let userType = 'general';
+            if (userIdValue <= 4)
+                userType = 'admin'; // First 4 are admin/demo users
+            else if (userIdValue <= systemUserIds.length)
+                userType = 'general'; // Managers/accountants
+            else if (
+                userIdValue <=
+                systemUserIds.length + studentUserIds.length
+            )
+                userType = 'student';
+            else userType = 'teacher';
+
+            const templates =
+                notificationTemplates[userType] ||
+                notificationTemplates.general;
+
+            // Create 2-5 notifications per user
+            const notificationCount = faker.number.int({ min: 2, max: 5 });
+
+            for (let i = 0; i < notificationCount; i++) {
+                const template = faker.helpers.arrayElement(templates);
+
+                notifications.push({
+                    user_id: userIdValue,
+                    title: template.title,
+                    body: template.body,
+                    is_read: faker.helpers.weightedArrayElement([
+                        { weight: 60, value: false }, // 60% unread
+                        { weight: 40, value: true }, // 40% read
+                    ]),
+                    sent_at: faker.date.between({
+                        from: `${currentYear}-01-01`,
+                        to: faker.date.future(),
+                    }),
+                });
+            }
+        }
+
+        await knex('notifications').insert(notifications);
+
         console.log(`✅ Created COMPREHENSIVE demo data for extensive API testing:
+        - ${days.length} school days
+        - ${periods.length} class periods
+        - ${teacherSubjects.length} teacher-subject assignments
+        - ${uniqueSchedules.length} class schedules
+        - ${studentAttendanceRecords.length} student attendance records
+        - ${teacherAttendanceRecords.length} teacher attendance records
+        - ${employeeAttendanceRecords.length} employee attendance records
+        - ${notifications.length} notifications for all users
         - ${archives.length} student archives
         - ${questions.length} questions with ${options.length} options  
         - ${exams.length} exams with ${examQuestions.length} question associations
         - ${examAttempts.length} exam attempts
         - ${grades.length} grade records across all subjects/semesters
         - ${behaviors.length} behavior records
-        - ${attendanceRecords.length} attendance records (6-month period)
         - ${tuitionPayments.length} tuition payments with various methods`);
+
+        // ================================================================
+        // PHASE 6F: CREATE FCM TOKENS FOR NOTIFICATIONS
+        // ================================================================
+        console.log(
+            '\n📱 Phase 6F: Creating FCM tokens for push notifications...'
+        );
+
+        const fcmTokens = [];
+
+        // Create FCM tokens for 80% of users (realistic mobile app usage)
+        const usersWithTokens = Math.floor(allUserIds.length * 0.8);
+
+        for (let i = 0; i < usersWithTokens; i++) {
+            const userId = allUserIds[i % allUserIds.length];
+            const userIdValue = userId.id || userId;
+
+            fcmTokens.push({
+                user_id: userIdValue,
+                token: `fake_fcm_token_${userIdValue}_${Date.now()}_${Math.random()
+                    .toString(36)
+                    .substr(2, 9)}`,
+                device_type: faker.helpers.arrayElement(['android', 'ios']),
+                is_active: faker.helpers.weightedArrayElement([
+                    { weight: 90, value: true }, // 90% active
+                    { weight: 10, value: false }, // 10% inactive
+                ]),
+            });
+        }
+
+        await knex('fcm_tokens').insert(fcmTokens);
 
         // ================================================================
         // PHASE 7: FINAL VERIFICATION

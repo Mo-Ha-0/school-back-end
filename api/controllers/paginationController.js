@@ -2,13 +2,21 @@ const { db } = require('../../config/db');
 const { validationResult } = require('express-validator');
 const { toDateOnly } = require('../utils/dateUtils');
 const { stripSensitive } = require('../utils/sanitize');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+} = require('../utils/errorHandler');
 
 module.exports = {
     async paginateTable(req, res) {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
 
             const {
@@ -21,25 +29,43 @@ module.exports = {
             } = req.body;
 
             if (!table || !['students', 'teachers', 'users'].includes(table)) {
-                return res.status(400).json({
-                    error: 'Invalid table parameter. Must be "students", "teachers", or "users"',
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Invalid table parameter. Must be "students", "teachers", or "users"',
+                            null,
+                            'INVALID_TABLE_PARAMETER'
+                        )
+                    );
             }
 
             const pageNum = parseInt(page);
             const pageSizeNum = parseInt(pageSize);
 
             if (pageNum < 1 || pageSizeNum < 1) {
-                return res.status(400).json({
-                    error: 'Page and pageSize must be positive integers',
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Page and pageSize must be positive integers',
+                            null,
+                            'INVALID_PAGINATION_PARAMETERS'
+                        )
+                    );
             }
 
             const validOrderDirections = ['asc', 'desc'];
             if (!validOrderDirections.includes(orderDirection.toLowerCase())) {
-                return res.status(400).json({
-                    error: 'orderDirection must be "asc" or "desc"',
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'orderDirection must be "asc" or "desc"',
+                            null,
+                            'INVALID_ORDER_DIRECTION'
+                        )
+                    );
             }
 
             let validOrderByFields;
@@ -73,11 +99,17 @@ module.exports = {
             }
 
             if (!validOrderByFields.includes(orderBy)) {
-                return res.status(400).json({
-                    error: `Invalid orderBy field for ${table}. Valid fields are: ${validOrderByFields.join(
-                        ', '
-                    )}`,
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            `Invalid orderBy field for ${table}. Valid fields are: ${validOrderByFields.join(
+                                ', '
+                            )}`,
+                            null,
+                            'INVALID_ORDER_BY_FIELD'
+                        )
+                    );
             }
 
             let orderByColumn;
@@ -297,22 +329,33 @@ module.exports = {
                 data: strippedData,
             });
         } catch (error) {
-            console.error('Pagination error:', error);
-
             // Handle specific database errors
             if (error.code === '42703') {
-                return res.status(400).json({
-                    error: 'Invalid column reference in query',
-                    details:
-                        'The requested ordering field does not exist in the database',
-                    field: orderBy,
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Invalid column reference in query',
+                            null,
+                            'INVALID_COLUMN_REFERENCE'
+                        )
+                    );
             }
 
-            res.status(500).json({
-                error: 'Internal server error during pagination',
-                details: error.message,
+            logError('Pagination failed', error, {
+                table,
+                page,
+                pageSize,
+                orderBy,
+                orderDirection,
             });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Internal server error during pagination',
+                    null,
+                    'PAGINATION_ERROR'
+                )
+            );
         }
     },
 };

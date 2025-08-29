@@ -22,16 +22,16 @@ router.get(
     attendanceTeachersController.getAllAttendanceTeachers
 );
 router.get(
-    '/:id',
-    authMiddleware,
-    hasPermission('get_teachers_attendance'),
-    attendanceTeachersController.getAttendanceTeachers
-);
-router.get(
     '/teacher/:teacherId',
     authMiddleware,
     hasPermission('get_teachers_attendance'),
     attendanceTeachersController.getAttendanceByTeacherId
+);
+router.get(
+    '/:id',
+    authMiddleware,
+    hasPermission('get_teachers_attendance'),
+    attendanceTeachersController.getAttendanceTeachers
 );
 router.put(
     '/:id',

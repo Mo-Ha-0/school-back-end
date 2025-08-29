@@ -32,17 +32,19 @@ router.put(
     hasPermission('update_role'),
     roleController.updatePermissions
 );
-router.put(
-    '/:roleId',
-    authMiddleware,
-    hasPermission('update_role'),
-    roleController.updateRoleName
-);
+
 router.get(
     '/:roleId/permissions',
     authMiddleware,
     hasPermission('get_permissions'),
     roleController.getRolePermissions
+);
+
+router.put(
+    '/:roleId',
+    authMiddleware,
+    hasPermission('update_role'),
+    roleController.updateRoleName
 );
 
 router.delete(

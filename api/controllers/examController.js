@@ -3,12 +3,21 @@ const examQuestionService = require('../services/examQuestionService');
 const { validationResult } = require('express-validator');
 const { db } = require('../../config/db');
 const bcrypt = require('bcrypt');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+    handleTransactionError,
+} = require('../utils/errorHandler');
 
 module.exports = {
     async createExamWithQuestions(req, res) {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+            return res
+                .status(HTTP_STATUS.BAD_REQUEST)
+                .json(handleValidationErrors(errors));
         }
 
         const trx = await db.transaction();
@@ -52,23 +61,57 @@ module.exports = {
             await trx.commit();
 
             // 3. Return combined response
-            res.status(201).json({
+            res.status(HTTP_STATUS.CREATED).json({
                 exam: exam[0],
                 questions: questionResults,
             });
         } catch (error) {
-            await trx.rollback();
-            res.status(400).json({ error: error.message });
+            await handleTransactionError(
+                trx,
+                error,
+                'Create exam with questions'
+            );
+
+            logError('Create exam with questions failed', error, {
+                subject_id: req.body.subject_id,
+                semester_id: req.body.semester_id,
+                createdBy: req.user?.id,
+            });
+
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create exam with questions.',
+                    null,
+                    'CREATE_EXAM_ERROR'
+                )
+            );
         }
     },
 
     async getExam(req, res) {
         try {
             const Exam = await examService.getExam(req.params.id);
-            if (!Exam) return res.status(404).json({ error: 'Exam not found' });
+            if (!Exam) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam not found.',
+                            null,
+                            'EXAM_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(Exam);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get exam failed', error, { examId: req.params.id });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve exam.',
+                    null,
+                    'GET_EXAM_ERROR'
+                )
+            );
         }
     },
 
@@ -77,44 +120,111 @@ module.exports = {
             const Exams = await examService.getAllExams();
             res.json(Exams);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get all exams failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve exams.',
+                    null,
+                    'GET_EXAMS_ERROR'
+                )
+            );
         }
     },
 
     async updateExam(req, res) {
         try {
             const Exam = await examService.updateExam(req.params.id, req.body);
-            if (!Exam || Exam.length == 0)
-                return res.status(404).json({ error: 'Exam not found' });
+            if (!Exam || Exam.length == 0) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam not found.',
+                            null,
+                            'EXAM_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(Exam);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Update exam failed', error, { examId: req.params.id });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update exam.',
+                    null,
+                    'UPDATE_EXAM_ERROR'
+                )
+            );
         }
     },
 
     async deleteExam(req, res) {
         try {
             const result = await examService.deleteExam(req.params.id);
-            if (!result)
-                return res.status(404).json({ error: 'Exam not found' });
-            res.status(200).json({ message: 'deleted successfuly' });
+            if (!result) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam not found.',
+                            null,
+                            'EXAM_NOT_FOUND'
+                        )
+                    );
+            }
+            res.status(HTTP_STATUS.OK).json({
+                message: 'Exam deleted successfully',
+            });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Delete exam failed', error, { examId: req.params.id });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete exam.',
+                    null,
+                    'DELETE_EXAM_ERROR'
+                )
+            );
         }
     },
 
     async getExamQuestion(req, res) {
         try {
             const Exam = await examService.getExam(req.body.id);
-            if (!Exam) return res.status(404).json({ error: 'Exam Not found' });
-            const result = await examService.getExamQuestion(req.body.id);
-            if (!result)
+            if (!Exam) {
                 return res
-                    .status(404)
-                    .json({ error: 'Exam questions not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam not found.',
+                            null,
+                            'EXAM_NOT_FOUND'
+                        )
+                    );
+            }
+            const result = await examService.getExamQuestion(req.body.id);
+            if (!result) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Exam questions not found.',
+                            null,
+                            'EXAM_QUESTIONS_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(result);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Get exam questions failed', error, {
+                examId: req.body.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve exam questions.',
+                    null,
+                    'GET_EXAM_QUESTIONS_ERROR'
+                )
+            );
         }
     },
 
@@ -140,7 +250,18 @@ module.exports = {
                 .andWhere('exam_type', 'exam');
             res.json(Exams);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get pre-exams for semester failed', error, {
+                subjectId,
+                semesterId,
+                userId: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve pre-exams for semester.',
+                    null,
+                    'GET_PRE_EXAMS_ERROR'
+                )
+            );
         }
     },
 
@@ -163,8 +284,14 @@ module.exports = {
 
             if (!student) {
                 return res
-                    .status(404)
-                    .json({ error: 'Student record not found for this user' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Student record not found for this user.',
+                            null,
+                            'STUDENT_NOT_FOUND'
+                        )
+                    );
             }
 
             const subject = await db('subjects')
@@ -173,13 +300,27 @@ module.exports = {
                 .first();
 
             if (!subject) {
-                return res.status(404).json({ error: 'Subject not found' });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Subject not found.',
+                            null,
+                            'SUBJECT_NOT_FOUND'
+                        )
+                    );
             }
 
             if (student.curriculum_id !== subject.curriculum_id) {
-                return res.status(403).json({
-                    error: 'Student curriculum does not match subject curriculum',
-                });
+                return res
+                    .status(HTTP_STATUS.FORBIDDEN)
+                    .json(
+                        createErrorResponse(
+                            'Student curriculum does not match subject curriculum.',
+                            null,
+                            'CURRICULUM_MISMATCH'
+                        )
+                    );
             }
 
             const semesters = await db('exams')
@@ -212,9 +353,18 @@ module.exports = {
             }
 
             res.json(semesters);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal server error' });
+        } catch (error) {
+            logError('Get semesters by subject for pre-exam failed', error, {
+                subject_id,
+                userId,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve semesters for pre-exam.',
+                    null,
+                    'GET_SEMESTERS_ERROR'
+                )
+            );
         }
     },
 
@@ -248,10 +398,16 @@ module.exports = {
                     // 'teacher_id',
                     'curriculum_id'
                 );
-            return res.status(200).json(exams);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal server error' });
+            return res.status(HTTP_STATUS.OK).json(exams);
+        } catch (error) {
+            logError('Get upcoming exam failed', error, { userId });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve upcoming exam.',
+                    null,
+                    'GET_UPCOMING_EXAM_ERROR'
+                )
+            );
         }
     },
 
@@ -278,7 +434,18 @@ module.exports = {
                 .andWhere('exam_type', 'quiz');
             res.json(quizzes);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get pre-quizzes for semester failed', error, {
+                subjectId,
+                semesterId,
+                userId: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve pre-quizzes for semester.',
+                    null,
+                    'GET_PRE_QUIZZES_ERROR'
+                )
+            );
         }
     },
 
@@ -346,14 +513,23 @@ module.exports = {
 
             if (semesters.length === 0) {
                 return res
-                    .status(404)
+                    .status(HTTP_STATUS.NOT_FOUND)
                     .json('There are no valid quizzes for this subject');
             }
 
             res.json(semesters);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal server error' });
+        } catch (error) {
+            logError('Get semesters by subject for pre-quiz failed', error, {
+                subject_id,
+                userId,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve semesters for pre-quiz.',
+                    null,
+                    'GET_SEMESTERS_QUIZ_ERROR'
+                )
+            );
         }
     },
 
@@ -387,10 +563,16 @@ module.exports = {
                     // 'teacher_id',
                     'curriculum_id'
                 );
-            return res.status(200).json(quizzes);
-        } catch (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Internal server error' });
+            return res.status(HTTP_STATUS.OK).json(quizzes);
+        } catch (error) {
+            logError('Get upcoming quiz failed', error, { userId });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve upcoming quiz.',
+                    null,
+                    'GET_UPCOMING_QUIZ_ERROR'
+                )
+            );
         }
     },
 
@@ -400,9 +582,15 @@ module.exports = {
             const { email, password, quizId } = req.body;
 
             if (!email || !password || !quizId) {
-                return res.status(400).json({
-                    error: 'Email, password, and quiz ID are required',
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Email, password, and quiz ID are required.',
+                            null,
+                            'MISSING_REQUIRED_FIELDS'
+                        )
+                    );
             }
 
             // Find quiz by UUID
@@ -411,7 +599,15 @@ module.exports = {
                 .first();
 
             if (!quiz) {
-                return res.status(404).json({ error: 'Quiz not found' });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Quiz not found.',
+                            null,
+                            'QUIZ_NOT_FOUND'
+                        )
+                    );
             }
 
             // Check if quiz is currently available
@@ -420,24 +616,42 @@ module.exports = {
             const endTime = new Date(quiz.end_datetime);
 
             if (now < startTime) {
-                return res.status(400).json({
-                    error: 'Quiz has not started yet',
-                    start_time: quiz.start_datetime,
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Quiz has not started yet.',
+                            { start_time: quiz.start_datetime },
+                            'QUIZ_NOT_STARTED'
+                        )
+                    );
             }
 
             if (now > endTime) {
-                return res.status(400).json({
-                    error: 'Quiz has ended',
-                    end_time: quiz.end_datetime,
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Quiz has ended.',
+                            { end_time: quiz.end_datetime },
+                            'QUIZ_ENDED'
+                        )
+                    );
             }
 
             // Validate user credentials
             const user = await db('users').where({ email }).first();
 
             if (!user) {
-                return res.status(401).json({ error: 'Invalid credentials' });
+                return res
+                    .status(HTTP_STATUS.UNAUTHORIZED)
+                    .json(
+                        createErrorResponse(
+                            'Invalid credentials.',
+                            null,
+                            'INVALID_CREDENTIALS'
+                        )
+                    );
             }
 
             // In a production environment, you should hash and compare passwords
@@ -449,7 +663,15 @@ module.exports = {
             );
 
             if (!isValidPassword) {
-                return res.status(401).json({ error: 'Invalid credentials' });
+                return res
+                    .status(HTTP_STATUS.UNAUTHORIZED)
+                    .json(
+                        createErrorResponse(
+                            'Invalid credentials.',
+                            null,
+                            'INVALID_CREDENTIALS'
+                        )
+                    );
             }
 
             // Check if user is a student
@@ -459,8 +681,14 @@ module.exports = {
 
             if (!student) {
                 return res
-                    .status(403)
-                    .json({ error: 'Only students can take quizzes' });
+                    .status(HTTP_STATUS.FORBIDDEN)
+                    .json(
+                        createErrorResponse(
+                            'Only students can take quizzes.',
+                            null,
+                            'STUDENT_ACCESS_REQUIRED'
+                        )
+                    );
             }
 
             // Check if student has already taken this quiz
@@ -472,11 +700,16 @@ module.exports = {
                 .first();
 
             if (existingAttempt) {
-                return res.status(400).json({
-                    error: 'You have already taken this quiz',
-                    score: existingAttempt.score,
-                    completed_at: existingAttempt.updated_at,
-                });
+                return res.status(HTTP_STATUS.BAD_REQUEST).json(
+                    createErrorResponse(
+                        'You have already taken this quiz.',
+                        {
+                            score: existingAttempt.score,
+                            completed_at: existingAttempt.updated_at,
+                        },
+                        'QUIZ_ALREADY_TAKEN'
+                    )
+                );
             }
 
             res.json({
@@ -497,8 +730,14 @@ module.exports = {
                 },
             });
         } catch (error) {
-            console.error('Quiz authentication error:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            logError('Quiz authentication failed', error, { quizId, email });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Quiz authentication failed due to server error.',
+                    null,
+                    'QUIZ_AUTH_ERROR'
+                )
+            );
         }
     },
 
@@ -508,7 +747,15 @@ module.exports = {
             const { email } = req.query;
 
             if (!email) {
-                return res.status(400).json({ error: 'Email is required' });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Email is required.',
+                            null,
+                            'MISSING_EMAIL'
+                        )
+                    );
             }
 
             // Find quiz by UUID
@@ -517,14 +764,30 @@ module.exports = {
                 .first();
 
             if (!quiz) {
-                return res.status(404).json({ error: 'Quiz not found' });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Quiz not found.',
+                            null,
+                            'QUIZ_NOT_FOUND'
+                        )
+                    );
             }
 
             // Verify user access (basic check)
             const user = await db('users').where({ email }).first();
 
             if (!user) {
-                return res.status(401).json({ error: 'Unauthorized access' });
+                return res
+                    .status(HTTP_STATUS.UNAUTHORIZED)
+                    .json(
+                        createErrorResponse(
+                            'Unauthorized access.',
+                            null,
+                            'UNAUTHORIZED_ACCESS'
+                        )
+                    );
             }
 
             // Get quiz questions with options
@@ -576,8 +839,17 @@ module.exports = {
                 questions: questions,
             });
         } catch (error) {
-            console.error('Get quiz data error:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            logError('Get quiz data failed', error, {
+                quizId: req.params.quizId,
+                email: req.query.email,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve quiz data.',
+                    null,
+                    'GET_QUIZ_DATA_ERROR'
+                )
+            );
         }
     },
 
@@ -590,9 +862,15 @@ module.exports = {
             const { email, answers } = req.body;
 
             if (!email || !answers || !Array.isArray(answers)) {
-                return res.status(400).json({
-                    error: 'Email and answers array are required',
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Email and answers array are required.',
+                            null,
+                            'MISSING_REQUIRED_FIELDS'
+                        )
+                    );
             }
 
             trx = await db.transaction();
@@ -604,7 +882,15 @@ module.exports = {
 
             if (!quiz) {
                 await trx.rollback();
-                return res.status(404).json({ error: 'Quiz not found' });
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Quiz not found.',
+                            null,
+                            'QUIZ_NOT_FOUND'
+                        )
+                    );
             }
 
             // Find user and student
@@ -612,7 +898,15 @@ module.exports = {
 
             if (!user) {
                 await trx.rollback();
-                return res.status(401).json({ error: 'User not found' });
+                return res
+                    .status(HTTP_STATUS.UNAUTHORIZED)
+                    .json(
+                        createErrorResponse(
+                            'User not found.',
+                            null,
+                            'USER_NOT_FOUND'
+                        )
+                    );
             }
 
             const student = await db('students')
@@ -622,8 +916,14 @@ module.exports = {
             if (!student) {
                 await trx.rollback();
                 return res
-                    .status(403)
-                    .json({ error: 'Student record not found' });
+                    .status(HTTP_STATUS.FORBIDDEN)
+                    .json(
+                        createErrorResponse(
+                            'Student record not found.',
+                            null,
+                            'STUDENT_NOT_FOUND'
+                        )
+                    );
             }
 
             // Check if already attempted
@@ -636,10 +936,15 @@ module.exports = {
 
             if (existingAttempt) {
                 await trx.rollback();
-                return res.status(400).json({
-                    error: 'Quiz already submitted',
-                    score: existingAttempt.score,
-                });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Quiz already submitted.',
+                            { score: existingAttempt.score },
+                            'QUIZ_ALREADY_SUBMITTED'
+                        )
+                    );
             }
 
             // Create exam attempt
@@ -785,8 +1090,17 @@ module.exports = {
             });
         } catch (error) {
             if (trx) await trx.rollback();
-            console.error('Submit quiz error:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            logError('Submit quiz failed', error, {
+                quizId: req.params.quizId,
+                email,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to submit quiz due to server error.',
+                    null,
+                    'SUBMIT_QUIZ_ERROR'
+                )
+            );
         }
     },
 };

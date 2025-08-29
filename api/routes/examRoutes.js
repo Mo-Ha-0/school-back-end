@@ -61,6 +61,14 @@ router.get(
     hasPermission('get_exam_questions'),
     examController.getExamQuestion
 );
+
+// Quiz-specific public routes (no authentication middleware needed)
+router.post('/quiz/authenticate', examController.authenticateQuizAccess);
+
+router.get('/quiz/:quizId/data', examController.getQuizData);
+
+router.post('/quiz/:quizId/submit', examController.submitQuizAnswers);
+
 // router.get(
 //     '/:id/questions_and_answers',
 //     authMiddleware,
@@ -85,13 +93,6 @@ router.delete(
     hasPermission('delete_exam'),
     examController.deleteExam
 );
-
-// Quiz-specific public routes (no authentication middleware needed)
-router.post('/quiz/authenticate', examController.authenticateQuizAccess);
-
-router.get('/quiz/:quizId/data', examController.getQuizData);
-
-router.post('/quiz/:quizId/submit', examController.submitQuizAnswers);
 
 //authMiddleware,checkRoles(['admin']),
 module.exports = router;

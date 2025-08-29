@@ -21,6 +21,13 @@ router.get(
 );
 
 router.get(
+    '/me/list',
+    authMiddleware,
+    // hasPermission('get_student_behaviors'),
+    behaviorController.getMyBehaviors
+);
+
+router.get(
     '/:id',
     authMiddleware,
     hasPermission('get_behaviors'),
@@ -39,13 +46,6 @@ router.delete(
     authMiddleware,
     hasPermission('delete_behavior'),
     behaviorController.deleteBehavior
-);
-
-router.get(
-    '/me/list',
-    authMiddleware,
-    // hasPermission('get_student_behaviors'),
-    behaviorController.getMyBehaviors
 );
 
 module.exports = router;

@@ -44,6 +44,14 @@ router.get(
     hasPermission('create_schedule', 'update_schedule'),
     classController.getClassSubjectsWithTeachers
 );
+
+router.get(
+    '/:id/can-delete',
+    authMiddleware,
+    hasPermission('delete_class'),
+    classController.canDeleteClass
+);
+
 router.get(
     '/:id',
     authMiddleware,
@@ -61,13 +69,6 @@ router.delete(
     authMiddleware,
     hasPermission('delete_class'),
     classController.deleteClass
-);
-
-router.get(
-    '/:id/can-delete',
-    authMiddleware,
-    hasPermission('delete_class'),
-    classController.canDeleteClass
 );
 
 //authMiddleware,checkRoles(['admin']),

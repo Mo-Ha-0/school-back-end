@@ -21,18 +21,21 @@ router.get(
     hasPermission('get_employees_attendance'),
     attendanceEmployeesController.getAllAttendanceEmployees
 );
-router.get(
-    '/:id',
-    authMiddleware,
-    hasPermission('get_employees_attendance'),
-    attendanceEmployeesController.getAttendanceEmployees
-);
+
 router.get(
     '/employee/:employeeId',
     authMiddleware,
     hasPermission('get_employees_attendance'),
     attendanceEmployeesController.getAttendanceByEmployeeId
 );
+
+router.get(
+    '/:id',
+    authMiddleware,
+    hasPermission('get_employees_attendance'),
+    attendanceEmployeesController.getAttendanceEmployees
+);
+
 router.put(
     '/:id',
     authMiddleware,

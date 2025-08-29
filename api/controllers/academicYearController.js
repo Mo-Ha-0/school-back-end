@@ -1,6 +1,12 @@
 const academicYearService = require('../services/academicYearService');
 const { toDateOnly } = require('../utils/dateUtils');
 const { validationResult } = require('express-validator');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+} = require('../utils/errorHandler');
 
 const bcrypt = require('bcrypt-nodejs');
 module.exports = {
@@ -8,7 +14,9 @@ module.exports = {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
             const AcademicYear = await academicYearService.createAcademicYear(
                 req.body
@@ -24,9 +32,20 @@ module.exports = {
                       start_year: toDateOnly(AcademicYear.start_year),
                       end_year: toDateOnly(AcademicYear.end_year),
                   };
-            res.status(201).json(formatted);
+            res.status(HTTP_STATUS.CREATED).json(formatted);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Create academic year failed', error, {
+                start_year: req.body.start_year,
+                end_year: req.body.end_year,
+                createdBy: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create academic year.',
+                    null,
+                    'CREATE_ACADEMIC_YEAR_ERROR'
+                )
+            );
         }
     },
 
@@ -35,10 +54,17 @@ module.exports = {
             const AcademicYear = await academicYearService.getAcademicYear(
                 req.params.id
             );
-            if (!AcademicYear)
+            if (!AcademicYear) {
                 return res
-                    .status(404)
-                    .json({ error: 'Academic Year not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Academic Year not found',
+                            null,
+                            'ACADEMIC_YEAR_NOT_FOUND'
+                        )
+                    );
+            }
             const formatted = {
                 ...AcademicYear,
                 start_year: toDateOnly(AcademicYear.start_year),
@@ -46,7 +72,16 @@ module.exports = {
             };
             res.json(formatted);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get academic year failed', error, {
+                academicYearId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve academic year.',
+                    null,
+                    'GET_ACADEMIC_YEAR_ERROR'
+                )
+            );
         }
     },
 
@@ -61,7 +96,14 @@ module.exports = {
             }));
             res.json(formatted);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get all academic years failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve academic years.',
+                    null,
+                    'GET_ACADEMIC_YEARS_ERROR'
+                )
+            );
         }
     },
 
@@ -71,10 +113,17 @@ module.exports = {
                 req.params.id,
                 req.body
             );
-            if (!AcademicYear || AcademicYear.length == 0)
+            if (!AcademicYear || AcademicYear.length == 0) {
                 return res
-                    .status(404)
-                    .json({ error: 'Academic Year not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Academic Year not found',
+                            null,
+                            'ACADEMIC_YEAR_NOT_FOUND'
+                        )
+                    );
+            }
             const formatted = AcademicYear.map
                 ? AcademicYear.map((year) => ({
                       ...year,
@@ -88,7 +137,16 @@ module.exports = {
                   };
             res.json(formatted);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Update academic year failed', error, {
+                academicYearId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update academic year.',
+                    null,
+                    'UPDATE_ACADEMIC_YEAR_ERROR'
+                )
+            );
         }
     },
 
@@ -97,13 +155,31 @@ module.exports = {
             const result = await academicYearService.deleteAcademicYear(
                 req.params.id
             );
-            if (!result)
+            if (!result) {
                 return res
-                    .status(404)
-                    .json({ error: 'Academic Year not found' });
-            res.status(200).json({ message: 'deleted successfuly' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Academic Year not found',
+                            null,
+                            'ACADEMIC_YEAR_NOT_FOUND'
+                        )
+                    );
+            }
+            res.status(HTTP_STATUS.OK).json({
+                message: 'Academic year deleted successfully',
+            });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Delete academic year failed', error, {
+                academicYearId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete academic year.',
+                    null,
+                    'DELETE_ACADEMIC_YEAR_ERROR'
+                )
+            );
         }
     },
 

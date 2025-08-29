@@ -1,5 +1,10 @@
 const roleService = require('../services/roleService');
 const { db } = require('../../config/db');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    logError,
+} = require('../utils/errorHandler');
 
 module.exports = {
     async createRole(req, res) {
@@ -16,8 +21,15 @@ module.exports = {
                     Ids.includes(permission)
                 );
                 if (allValid === false) {
-                    console.log('object');
-                    return res.json({ error: 'invalid permissions' });
+                    return res
+                        .status(HTTP_STATUS.BAD_REQUEST)
+                        .json(
+                            createErrorResponse(
+                                'Invalid permissions provided',
+                                null,
+                                'INVALID_PERMISSIONS'
+                            )
+                        );
                 }
 
                 const role = await roleService.createRole({ name });
@@ -37,22 +49,48 @@ module.exports = {
                     }
                 }
                 return res
-                    .status(201)
+                    .status(HTTP_STATUS.CREATED)
                     .json({ role, permission_ids: permissionIds });
             }
 
-            return res.json({ error: 'role already exists' });
+            return res
+                .status(HTTP_STATUS.CONFLICT)
+                .json(
+                    createErrorResponse(
+                        'Role already exists',
+                        null,
+                        'ROLE_ALREADY_EXISTS'
+                    )
+                );
         } catch (err) {
-            res.status(400).json({ error: err.message });
+            logError('Create role failed', err, {
+                roleName: req.body.name,
+                permissions: req.body.permissions,
+                createdBy: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create role.',
+                    null,
+                    'CREATE_ROLE_ERROR'
+                )
+            );
         }
     },
 
     async getAllRoles(req, res) {
         try {
             const roles = await roleService.getAllRoles();
-            res.status(200).json(roles);
+            res.status(HTTP_STATUS.OK).json(roles);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            logError('Get all roles failed', err);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve roles.',
+                    null,
+                    'GET_ROLES_ERROR'
+                )
+            );
         }
     },
 
@@ -60,9 +98,16 @@ module.exports = {
         try {
             const roles = await roleService.getAllEmployeesRoles();
 
-            res.status(200).json(roles);
+            res.status(HTTP_STATUS.OK).json(roles);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            logError('Get all employee roles failed', err);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve employee roles.',
+                    null,
+                    'GET_EMPLOYEE_ROLES_ERROR'
+                )
+            );
         }
     },
 
@@ -89,14 +134,30 @@ module.exports = {
                     }
                 }
                 return res
-                    .status(201)
+                    .status(HTTP_STATUS.CREATED)
                     .json({ role: exists[0], permission_ids: permissionIds });
             }
 
-            return res.json({ error: "role doesn't exists" });
+            return res
+                .status(HTTP_STATUS.NOT_FOUND)
+                .json(
+                    createErrorResponse(
+                        'Role does not exist',
+                        null,
+                        'ROLE_NOT_FOUND'
+                    )
+                );
         } catch (err) {
-            console.error(err);
-            res.status(400).json({ error: err.message });
+            logError('Update permissions failed', err, {
+                roleId: req.body.roleId,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update permissions.',
+                    null,
+                    'UPDATE_PERMISSIONS_ERROR'
+                )
+            );
         }
     },
 
@@ -105,15 +166,33 @@ module.exports = {
             const { roleId } = req.params;
             const roleIdNum = parseInt(roleId, 10);
             const role = await roleService.getRoleById(roleIdNum);
-            console.log(role);
-            if (!role[0]) return res.json({ error: "role doesn't exists" });
+            if (!role[0]) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Role does not exist',
+                            null,
+                            'ROLE_NOT_FOUND'
+                        )
+                    );
+            }
             const permissions = await roleService.getPermissionsOfRole(
                 roleIdNum
             );
 
-            res.status(200).json(permissions);
+            res.status(HTTP_STATUS.OK).json(permissions);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            logError('Get role permissions failed', err, {
+                roleId: req.params.roleId,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve role permissions.',
+                    null,
+                    'GET_ROLE_PERMISSIONS_ERROR'
+                )
+            );
         }
     },
 
@@ -122,29 +201,76 @@ module.exports = {
             const { roleId } = req.params;
             const role = await roleService.deleteRole(roleId);
 
-            if (!role) return res.status(404).json({ error: 'Role not found' });
+            if (!role) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Role not found',
+                            null,
+                            'ROLE_NOT_FOUND'
+                        )
+                    );
+            }
 
-            res.status(200).json({ message: 'deleted successfuly' });
+            res.status(HTTP_STATUS.OK).json({
+                message: 'Role deleted successfully',
+            });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            logError('Delete role failed', err, { roleId: req.params.roleId });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete role.',
+                    null,
+                    'DELETE_ROLE_ERROR'
+                )
+            );
         }
     },
+
     async updateRoleName(req, res) {
         try {
             const { roleId } = req.params;
             const { name } = req.body;
             if (!name || typeof name !== 'string') {
-                return res.status(400).json({ error: 'Invalid role name' });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Invalid role name',
+                            null,
+                            'INVALID_ROLE_NAME'
+                        )
+                    );
             }
             const updated = await roleService.updateRoleName(
                 parseInt(roleId, 10),
                 name
             );
-            if (!updated)
-                return res.status(404).json({ error: 'Role not found' });
-            res.status(200).json(updated);
+            if (!updated) {
+                return res
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Role not found',
+                            null,
+                            'ROLE_NOT_FOUND'
+                        )
+                    );
+            }
+            res.status(HTTP_STATUS.OK).json(updated);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            logError('Update role name failed', err, {
+                roleId: req.params.roleId,
+                newName: req.body.name,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update role name.',
+                    null,
+                    'UPDATE_ROLE_NAME_ERROR'
+                )
+            );
         }
     },
 };

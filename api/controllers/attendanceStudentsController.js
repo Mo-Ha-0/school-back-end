@@ -1,13 +1,21 @@
 const attendanceStudentsService = require('../services/attendanceStudentsService');
 const { toDateOnly } = require('../utils/dateUtils');
 const { validationResult } = require('express-validator');
+const {
+    createErrorResponse,
+    HTTP_STATUS,
+    handleValidationErrors,
+    logError,
+} = require('../utils/errorHandler');
 
 module.exports = {
     async createAttendanceStudents(req, res) {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(handleValidationErrors(errors));
             }
             let { date, attendance } = req.body;
             const created_by = req.user.id; // Get the authenticated user's ID
@@ -18,8 +26,14 @@ module.exports = {
                 );
             if (attendance_students.length > 0) {
                 return res
-                    .status(400)
-                    .json({ error: 'Attendance already exists' });
+                    .status(HTTP_STATUS.BAD_REQUEST)
+                    .json(
+                        createErrorResponse(
+                            'Attendance already exists for this date.',
+                            null,
+                            'ATTENDANCE_ALREADY_EXISTS'
+                        )
+                    );
             }
             // Transform the attendance data to include date and created_by
             const transformedAttendance = attendance.map((record) => ({
@@ -33,9 +47,21 @@ module.exports = {
                 await attendanceStudentsService.createAttendanceStudents(
                     transformedAttendance
                 );
-            res.status(201).json({ attendance: AttendanceStudents });
+            res.status(HTTP_STATUS.CREATED).json({
+                attendance: AttendanceStudents,
+            });
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Create attendance students failed', error, {
+                date: req.body.date,
+                createdBy: req.user?.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to create attendance records.',
+                    null,
+                    'CREATE_ATTENDANCE_ERROR'
+                )
+            );
         }
     },
 
@@ -45,13 +71,29 @@ module.exports = {
                 await attendanceStudentsService.getAttendanceStudents(
                     req.params.id
                 );
-            if (!AttendanceStudents)
+            if (!AttendanceStudents) {
                 return res
-                    .status(404)
-                    .json({ error: 'Attendance Students not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Attendance Students not found.',
+                            null,
+                            'ATTENDANCE_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(AttendanceStudents);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get attendance students failed', error, {
+                attendanceId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve attendance records.',
+                    null,
+                    'GET_ATTENDANCE_ERROR'
+                )
+            );
         }
     },
 
@@ -61,7 +103,14 @@ module.exports = {
                 await attendanceStudentsService.getAllAttendanceStudents();
             res.json(AttendanceStudents);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get all attendance students failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve all attendance records.',
+                    null,
+                    'GET_ALL_ATTENDANCE_ERROR'
+                )
+            );
         }
     },
 
@@ -72,13 +121,29 @@ module.exports = {
                     req.params.id,
                     req.body
                 );
-            if (!AttendanceStudents || AttendanceStudents.length == 0)
+            if (!AttendanceStudents || AttendanceStudents.length == 0) {
                 return res
-                    .status(404)
-                    .json({ error: 'AttendanceStudents not found' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Attendance Students not found.',
+                            null,
+                            'ATTENDANCE_NOT_FOUND'
+                        )
+                    );
+            }
             res.json(AttendanceStudents);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            logError('Update attendance students failed', error, {
+                attendanceId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to update attendance records.',
+                    null,
+                    'UPDATE_ATTENDANCE_ERROR'
+                )
+            );
         }
     },
 
@@ -88,13 +153,31 @@ module.exports = {
                 await attendanceStudentsService.deleteAttendanceStudents(
                     req.params.id
                 );
-            if (!result)
+            if (!result) {
                 return res
-                    .status(404)
-                    .json({ error: 'Attendance Students not found' });
-            res.status(200).json({ message: 'deleted successfuly' });
+                    .status(HTTP_STATUS.NOT_FOUND)
+                    .json(
+                        createErrorResponse(
+                            'Attendance Students not found.',
+                            null,
+                            'ATTENDANCE_NOT_FOUND'
+                        )
+                    );
+            }
+            res.status(HTTP_STATUS.OK).json({
+                message: 'Attendance records deleted successfully',
+            });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Delete attendance students failed', error, {
+                attendanceId: req.params.id,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to delete attendance records.',
+                    null,
+                    'DELETE_ATTENDANCE_ERROR'
+                )
+            );
         }
     },
 
@@ -112,7 +195,16 @@ module.exports = {
             }));
             res.json(formatedAttendance);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            logError('Get attendance by student ID failed', error, {
+                studentId,
+            });
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve attendance records for student.',
+                    null,
+                    'GET_STUDENT_ATTENDANCE_ERROR'
+                )
+            );
         }
     },
 };
