@@ -1,5 +1,4 @@
-// api/controllers/tuitionPaymentController.js
-const tuitionPaymentService = require('../services/tuitionPaymentService');
+const tuitionPaymentService = require('../services/TuitionPaymentService');
 const { validationResult } = require('express-validator');
 const { db } = require('../../config/db');
 
