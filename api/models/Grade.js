@@ -32,9 +32,10 @@ class Grade {
       if (!scorecard[semester_id]) {
         scorecard[semester_id] = {
           semester_id,
-          semester_name, // Add semester name
+          semester_name,
           subjects: {},
           semesterTotalScore: 0,
+          semesterTotalMaxScore: 0,
           semesterCount: 0
         };
       }
@@ -48,6 +49,7 @@ class Grade {
           subject_name,
           grade_types: {},
           subjectTotalScore: 0,
+          subjectTotalMaxScore: 0,
           subjectCount: 0
         };
       }
@@ -60,58 +62,76 @@ class Grade {
           type,
           assignments: [],
           typeTotalScore: 0,
+          typeTotalMaxScore: 0,
           typeCount: 0
         };
       }
       
       const gradeType = subject.grade_types[type];
       
-      const numericGrade = parseFloat(grade);
-      const numericMax = parseFloat(max_score);
+      const numericGrade = parseFloat(grade) || 0;
+      const numericMax = parseFloat(max_score) || 0;
+      const numericMin = parseFloat(min_score) || 0;
+      
+      // Calculate percentage correctly
+      const percentage = numericMax > 0 ? (numericGrade / numericMax) * 100 : 0;
       
       gradeType.assignments.push({
         score: numericGrade,
-        min_score: parseFloat(min_score),
+        min_score: numericMin,
         max_score: numericMax,
-        percentage: (numericGrade / numericMax) * 100
+        percentage: Math.round(percentage * 100) / 100 // Round to 2 decimal places
       });
       
       gradeType.typeTotalScore += numericGrade;
+      gradeType.typeTotalMaxScore += numericMax;
       gradeType.typeCount++;
+      
       subject.subjectTotalScore += numericGrade;
+      subject.subjectTotalMaxScore += numericMax;
       subject.subjectCount++;
+      
       semester.semesterTotalScore += numericGrade;
+      semester.semesterTotalMaxScore += numericMax;
       semester.semesterCount++;
     });
     
     // Format the result with nested structure
     return Object.values(scorecard).map(semester => {
       const subjects = Object.values(semester.subjects).map(subject => {
-        const gradeTypes = Object.values(subject.grade_types).map(type => ({
-          type: type.type,
-          assignments: type.assignments,
-          typeAverage: type.typeTotalScore / type.typeCount,
-          assignment_count: type.typeCount,
-          typeTotal: type.typeTotalScore
-        }));
+        const gradeTypes = Object.values(subject.grade_types).map(type => {
+          const typeAverage = type.typeCount > 0 ? type.typeTotalScore / type.typeCount : 0;
+          
+          return {
+            type: type.type,
+            assignments: type.assignments,
+            typeAverage: Math.round(typeAverage * 100) / 100,
+            assignment_count: type.typeCount,
+            typeTotal: Math.round(type.typeTotalScore * 100) / 100
+          };
+        });
+        
+        const subjectAverage = subject.subjectCount > 0 ? subject.subjectTotalScore / subject.subjectCount : 0;
         
         return {
           subject_id: subject.subject_id,
           subject_name: subject.subject_name,
           grade_types: gradeTypes,
-          subjectAverage: subject.subjectTotalScore / subject.subjectCount,
+          subjectAverage: Math.round(subjectAverage * 100) / 100,
           totalAssignments: subject.subjectCount,
-          totalScore: subject.subjectTotalScore
+          totalScore: Math.round(subject.subjectTotalScore * 100) / 100
         };
       });
       
+      const semesterAverage = semester.semesterCount > 0 ? semester.semesterTotalScore / semester.semesterCount : 0;
+      
       return {
         semester_id: semester.semester_id,
-        semester_name: semester.semester_name, // Include semester name
+        semester_name: semester.semester_name,
         subjects,
-        semesterAverage: semester.semesterTotalScore / semester.semesterCount,
+        semesterAverage: Math.round(semesterAverage * 100) / 100,
         totalSemesterAssignments: semester.semesterCount,
-        totalSemesterScore: semester.semesterTotalScore
+        totalSemesterScore: Math.round(semester.semesterTotalScore * 100) / 100
       };
     });
   }
