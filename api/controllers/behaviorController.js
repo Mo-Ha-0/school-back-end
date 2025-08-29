@@ -1,5 +1,6 @@
 const behaviorService = require('../services/behaviorService');
 const studentService = require('../services/studentService');
+const fcmTokensService = require('../services/fcmTokensService');
 const { validationResult } = require('express-validator');
 const { toDateOnly } = require('../utils/dateUtils');
 const { stripSensitive } = require('../utils/sanitize');
@@ -9,6 +10,8 @@ const {
     handleValidationErrors,
     logError,
 } = require('../utils/errorHandler');
+const { db } = require('../../config/db');
+
 
 module.exports = {
     async createBehavior(req, res) {
@@ -23,6 +26,14 @@ module.exports = {
             const created_by = req.user.id;
             const date = new Date(); // Set date to current date
 
+            //send message
+        
+          const student1=  await db('students').where({ id:student_id }).first();
+            await fcmTokensService.sendMessage(
+                student1.user_id, 
+                type, 
+                description
+            );
             const behavior = await behaviorService.createBehavior({
                 student_id,
                 description,

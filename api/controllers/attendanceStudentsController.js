@@ -1,6 +1,8 @@
 const attendanceStudentsService = require('../services/attendanceStudentsService');
+const fcmTokensService = require('../services/fcmTokensService');
 const { toDateOnly } = require('../utils/dateUtils');
 const { validationResult } = require('express-validator');
+const { db } = require('../../config/db');
 const {
     createErrorResponse,
     HTTP_STATUS,
@@ -17,9 +19,10 @@ module.exports = {
                     .status(HTTP_STATUS.BAD_REQUEST)
                     .json(handleValidationErrors(errors));
             }
+            
             let { date, attendance } = req.body;
             const created_by = req.user.id; // Get the authenticated user's ID
-
+    
             const attendance_students =
                 await attendanceStudentsService.getAttendanceStudentsByDate(
                     date
@@ -35,6 +38,7 @@ module.exports = {
                         )
                     );
             }
+    
             // Transform the attendance data to include date and created_by
             const transformedAttendance = attendance.map((record) => ({
                 ...record,
@@ -42,13 +46,46 @@ module.exports = {
                 created_by,
             }));
             console.log(transformedAttendance);
-
+    
             const AttendanceStudents =
                 await attendanceStudentsService.createAttendanceStudents(
                     transformedAttendance
                 );
+    
+            // Check for late/absent students and send notifications
+            const lateOrAbsentStudents = attendance.filter(record => 
+                record.status === 'late' || record.status === 'absent'
+            );
+    
+            if (lateOrAbsentStudents.length > 0) {
+                // Send notifications for each late/absent student
+                for (const record of lateOrAbsentStudents) {
+                    try {
+                        const title = 'Attendance Alert';
+                        const body = `Your child has been marked as ${record.status.toUpperCase()} on ${date}`;
+                      const student1=  await db('students').where({ id:record.student_id }).first();
+                        await fcmTokensService.sendMessage(
+                            student1.user_id, 
+                            title, 
+                            body
+                        );
+                        
+                        console.log(`Notification sent for student ${record.student_id} (${record.status})`);
+                    } catch (error) {
+                        // Log error but don't stop the process
+                        console.error(`Failed to send notification for student ${record.student_id}:`, error);
+                        logError('Failed to send attendance notification', error, {
+                            student_id: record.student_id,
+                            status: record.status,
+                            date: date
+                        });
+                    }
+                }
+            }
+    
             res.status(HTTP_STATUS.CREATED).json({
                 attendance: AttendanceStudents,
+                notifications_sent: lateOrAbsentStudents.length
             });
         } catch (error) {
             logError('Create attendance students failed', error, {
@@ -64,7 +101,6 @@ module.exports = {
             );
         }
     },
-
     async getAttendanceStudents(req, res) {
         try {
             const AttendanceStudents =
