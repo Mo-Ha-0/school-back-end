@@ -131,6 +131,42 @@ module.exports = {
         }
     },
 
+    async getQuizzes(req, res) {
+        try {
+            const Exams = await db('exams')
+                .select('*')
+                .where('exam_type', 'quiz');
+            res.json(Exams);
+        } catch (error) {
+            logError('Get all exams failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve exams.',
+                    null,
+                    'GET_EXAMS_ERROR'
+                )
+            );
+        }
+    },
+
+    async getExams(req, res) {
+        try {
+            const Exams = await db('exams')
+                .select('*')
+                .where('exam_type', 'exam');
+            res.json(Exams);
+        } catch (error) {
+            logError('Get all exams failed', error);
+            res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+                createErrorResponse(
+                    'Failed to retrieve exams.',
+                    null,
+                    'GET_EXAMS_ERROR'
+                )
+            );
+        }
+    },
+
     async updateExam(req, res) {
         try {
             const Exam = await examService.updateExam(req.params.id, req.body);
@@ -512,9 +548,7 @@ module.exports = {
                 );
 
             if (semesters.length === 0) {
-                return res
-                    .status(200)
-                    .json([]);
+                return res.status(200).json([]);
             }
 
             res.json(semesters);

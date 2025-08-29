@@ -20,6 +20,18 @@ router.get(
     examController.getAllExams
 );
 router.get(
+    '/exams',
+    authMiddleware,
+    hasPermission('get_exams'),
+    examController.getExams
+);
+router.get(
+    '/quizzes',
+    authMiddleware,
+    hasPermission('get_exams'),
+    examController.getQuizzes
+);
+router.get(
     '/student-preexams',
     authMiddleware,
     hasPermission('get_preexams'),
