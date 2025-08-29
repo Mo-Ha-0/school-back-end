@@ -21,7 +21,7 @@ exports.up = function (knex) {
                         'Practical Skills',
                         'Good Behavior',
                     ])
-                    .nullable();
+                    .notNullable();
             });
         });
 };
