@@ -6,91 +6,129 @@ class TuitionPayment {
         return 'tuition_payments';
     }
 
-    static async findAll(filters = {}) {
-        let query = db(this.tableName)
-            .select(
-                'tuition_payments.*',
-                'students.user_id as student_user_id',
-                'student_users.name as student_name',
-                'student_users.email as student_email',
-                'student_users.phone as student_phone',
-                'verifier_users.name as verified_by_name',
-                'classes.class_name',
-                'academic_years.start_year',
-                'academic_years.end_year'
-            )
-            .leftJoin('students', 'tuition_payments.student_id', 'students.id')
-            .leftJoin(
-                'users as student_users',
-                'students.user_id',
-                'student_users.id'
-            )
-            .leftJoin(
-                'users as verifier_users',
-                'tuition_payments.verified_by',
-                'verifier_users.id'
-            )
-            .leftJoin('classes', 'students.class_id', 'classes.id')
-            .leftJoin('archives', 'tuition_payments.archive_id', 'archives.id')
-            .leftJoin(
-                'academic_years',
-                'archives.academic_year_id',
-                'academic_years.id'
-            );
-
-        if (filters.student_id) {
-            query = query.where(
-                'tuition_payments.student_id',
-                filters.student_id
-            );
+    static async findAll(filters = {}, page = 1, limit = 10) {
+        try {
+            console.log('Pagination params:', page, limit);
+            
+            // Validate pagination parameters
+            page = Math.max(1, parseInt(page));
+            limit = Math.max(1, Math.min(parseInt(limit), 100));
+    
+            // Function to build the base query structure
+            const buildQuery = () => {
+                return db(this.tableName)
+                    .select(
+                        'tuition_payments.*',
+                        'students.user_id as student_user_id',
+                        'student_users.name as student_name',
+                        'student_users.email as student_email',
+                        'student_users.phone as student_phone',
+                        'verifier_users.name as verified_by_name',
+                        'classes.class_name',
+                        'academic_years.start_year',
+                        'academic_years.end_year'
+                    )
+                    .leftJoin('students', 'tuition_payments.student_id', 'students.id')
+                    .leftJoin('users as student_users', 'students.user_id', 'student_users.id')
+                    .leftJoin('users as verifier_users', 'tuition_payments.verified_by', 'verifier_users.id')
+                    .leftJoin('classes', 'students.class_id', 'classes.id')
+                    .leftJoin('archives', 'tuition_payments.archive_id', 'archives.id')
+                    .leftJoin('academic_years', 'archives.academic_year_id', 'academic_years.id');
+            };
+    
+            // Function to apply filters to a query
+            const applyFilters = (query) => {
+                let filteredQuery = query;
+                
+                if (filters.student_id) {
+                    filteredQuery = filteredQuery.where('tuition_payments.student_id', filters.student_id);
+                }
+                if (filters.payment_method) {
+                    filteredQuery = filteredQuery.where('tuition_payments.payment_method', filters.payment_method);
+                }
+                if (filters.date_from) {
+                    filteredQuery = filteredQuery.where('tuition_payments.payment_date', '>=', filters.date_from);
+                }
+                if (filters.date_to) {
+                    filteredQuery = filteredQuery.where('tuition_payments.payment_date', '<=', filters.date_to);
+                }
+                if (filters.verified === true) {
+                    filteredQuery = filteredQuery.whereNotNull('tuition_payments.verified_by');
+                } else if (filters.verified === false) {
+                    filteredQuery = filteredQuery.whereNull('tuition_payments.verified_by');
+                }
+                if (filters.archive_id) {
+                    filteredQuery = filteredQuery.where('tuition_payments.archive_id', filters.archive_id);
+                }
+                if (filters.academic_year_id) {
+                    filteredQuery = filteredQuery.where('archives.academic_year_id', filters.academic_year_id);
+                }
+                
+                return filteredQuery;
+            };
+    
+            // Build and execute COUNT query (separate from data query)
+            const countQuery = buildQuery()
+                .clearSelect()
+                .count('* as total');
+            
+            const filteredCountQuery = applyFilters(countQuery);
+            console.log('Count query SQL:', filteredCountQuery.toString());
+            
+            const totalResult = await filteredCountQuery.first();
+            const total = parseInt(totalResult.total);
+            console.log('Total records found:', total);
+    
+            // If no records, return empty result
+            if (total === 0) {
+                return {
+                    data: [],
+                    pagination: {
+                        current_page: page,
+                        per_page: limit,
+                        total: 0,
+                        total_pages: 0,
+                        has_next: false,
+                        has_prev: false
+                    }
+                };
+            }
+    
+            // Build and execute DATA query (completely separate from count query)
+            const dataQuery = buildQuery();
+            const filteredDataQuery = applyFilters(dataQuery)
+                .orderBy('tuition_payments.payment_date', 'desc');
+    
+            // Apply pagination
+            const offset = (page - 1) * limit;
+            const paginatedQuery = filteredDataQuery.offset(offset).limit(limit);
+            
+            console.log('Data query SQL:', paginatedQuery.toString());
+            
+            const data = await paginatedQuery;
+            console.log('Data retrieved:', data.length, 'records');
+    
+            // Calculate pagination metadata
+            const totalPages = Math.ceil(total / limit);
+    
+            return {
+                data,
+                pagination: {
+                    current_page: page,
+                    per_page: limit,
+                    total,
+                    total_pages: totalPages,
+                    has_next: page < totalPages,
+                    has_prev: page > 1
+                }
+            };
+    
+        } catch (error) {
+            console.error('Error in findAll:', error);
+            console.error('Error stack:', error.stack);
+            throw new Error('Failed to fetch tuition payments: ' + error.message);
         }
-
-        if (filters.payment_method) {
-            query = query.where(
-                'tuition_payments.payment_method',
-                filters.payment_method
-            );
-        }
-
-        if (filters.date_from) {
-            query = query.where(
-                'tuition_payments.payment_date',
-                '>=',
-                filters.date_from
-            );
-        }
-
-        if (filters.date_to) {
-            query = query.where(
-                'tuition_payments.payment_date',
-                '<=',
-                filters.date_to
-            );
-        }
-
-        if (filters.verified === true) {
-            query = query.whereNotNull('tuition_payments.verified_by');
-        } else if (filters.verified === false) {
-            query = query.whereNull('tuition_payments.verified_by');
-        }
-
-        if (filters.archive_id) {
-            query = query.where(
-                'tuition_payments.archive_id',
-                filters.archive_id
-            );
-        }
-
-        if (filters.academic_year_id) {
-            query = query.where(
-                'archives.academic_year_id',
-                filters.academic_year_id
-            );
-        }
-
-        return await query.orderBy('tuition_payments.payment_date', 'desc');
     }
-
     static async findById(id) {
         return await db(this.tableName)
             .select(

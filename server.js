@@ -9,7 +9,7 @@ const {
     logError,
     HTTP_STATUS,
 } = require('./api/utils/errorHandler');
-
+// console.log(require('crypto').randomBytes(32).toString('hex'))
 // Firebase SDK
 const admin = require('./firebase/firebase-admin.js');
 require('dotenv').config();

@@ -349,7 +349,7 @@ module.exports = {
                 );
 
             if (semesters.length === 0) {
-                return res.json('There are no valid exams for this subject');
+                return res.json([]);
             }
 
             res.json(semesters);
@@ -513,8 +513,8 @@ module.exports = {
 
             if (semesters.length === 0) {
                 return res
-                    .status(HTTP_STATUS.NOT_FOUND)
-                    .json('There are no valid quizzes for this subject');
+                    .status(200)
+                    .json([]);
             }
 
             res.json(semesters);

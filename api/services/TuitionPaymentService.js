@@ -95,8 +95,8 @@ module.exports = {
         return await TuitionPayment.findById(id);
     },
 
-    async getAllTuitionPayments(filters = {}) {
-        return await TuitionPayment.findAll(filters);
+    async getAllTuitionPayments(filters = {},page,limit) {
+        return await TuitionPayment.findAll(filters,page,limit);
     },
 
     async updateTuitionPayment(id, updates) {
@@ -342,10 +342,19 @@ module.exports = {
             .orderBy('tuition_payments.payment_date', 'desc');
     },
 
-    async getOutstandingPayments() {
+    async getOutstandingPayments(page = 1, limit = 10) {
         const { db } = require('../../config/db');
-
-        return await db('archives')
+        
+        const offset = (page - 1) * limit;
+        
+        // Get total count for pagination metadata
+        const totalCount = await db('archives')
+            .where('remaining_tuition', '>', 0)
+            .count('* as count')
+            .first();
+        
+        // Get paginated results
+        const payments = await db('archives')
             .select(
                 'archives.student_id',
                 'archives.remaining_tuition',
@@ -357,13 +366,23 @@ module.exports = {
             )
             .join('students', 'archives.student_id', 'students.id')
             .join('users', 'students.user_id', 'users.id')
-            .join(
-                'academic_years',
-                'archives.academic_year_id',
-                'academic_years.id'
-            )
+            .join('academic_years', 'archives.academic_year_id', 'academic_years.id')
             .where('archives.remaining_tuition', '>', 0)
-            .orderBy('archives.remaining_tuition', 'desc');
+            .orderBy('archives.remaining_tuition', 'desc')
+            .offset(offset)
+            .limit(limit);
+        
+        return {
+            payments,
+            pagination: {
+                current_page: page,
+                per_page: limit,
+                total: parseInt(totalCount.count),
+                total_pages: Math.ceil(totalCount.count / limit),
+                has_next: page < Math.ceil(totalCount.count / limit),
+                has_prev: page > 1
+            }
+        };
     },
 
     async getMonthlyPaymentReport(year, month) {

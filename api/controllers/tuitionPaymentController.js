@@ -20,6 +20,7 @@ module.exports = {
 
     async getTuitionPayment(req, res) {
         try {
+            
             const tuitionPayment =
                 await tuitionPaymentService.getTuitionPayment(req.params.id);
             if (!tuitionPayment) {
@@ -41,9 +42,10 @@ module.exports = {
                 date_from: req.query.date_from,
                 date_to: req.query.date_to,
             };
-
+            const{page,limit}=req.query;
+            console.log(page,limit)
             const tuitionPayments =
-                await tuitionPaymentService.getAllTuitionPayments(filters);
+                await tuitionPaymentService.getAllTuitionPayments(filters,page,limit);
             res.json(tuitionPayments);
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -197,8 +199,9 @@ module.exports = {
 
     async getOutstandingPayments(req, res) {
         try {
+            const {page  ,limit }=req.body
             const outstandingPayments =
-                await tuitionPaymentService.getOutstandingPayments();
+                await tuitionPaymentService.getOutstandingPayments(page,limit);
             res.json(outstandingPayments);
         } catch (error) {
             res.status(500).json({ error: error.message });

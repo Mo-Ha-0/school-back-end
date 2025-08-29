@@ -18,6 +18,8 @@ const {
     asyncErrorHandler,
 } = require('../utils/errorHandler');
 require('dotenv').config();
+// Add this right after require('dotenv').config();
+
 module.exports = {
     async signIn(req, res) {
         try {

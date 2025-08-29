@@ -18,7 +18,7 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    hasPermission('get_notifications'),
+    // hasPermission('get_notifications'),
     notificationController.getNotificationsForUser
 );
 router.get(
@@ -52,7 +52,7 @@ router.put(
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('delete_notification'),
+    // hasPermission('delete_notification'),
     notificationController.deleteNotification
 );
 

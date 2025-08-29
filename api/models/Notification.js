@@ -10,7 +10,7 @@ class Notification {
   }
   
   static async findByUserId(id) {
-    return await db('notifications').where({ user_id:id }).orderBy('sent_at', 'asc');
+    return await db('notifications').where({ user_id:id }).orderBy('sent_at', 'desc');
 
   }
   static async findAll() {
