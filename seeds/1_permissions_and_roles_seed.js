@@ -180,6 +180,7 @@ exports.seed = async function (knex) {
         if (teacherRole) {
             const teacherPermissions = permissions.filter(
                 (p) =>
+                    p.name === 'manage_academic_years' || // Student management
                     p.name === 'manage_students' || // Student management
                     p.name === 'manage_exams' || // Exam and question management
                     p.name === 'view_exam_results' || // View exam results
@@ -190,6 +191,7 @@ exports.seed = async function (knex) {
                     p.name === 'view_dashboard' || // Dashboard access
                     p.name === 'attendance_mobile_app' || // Attendance app access
                     p.name === 'view_notifications' || // Notifications
+                    p.name === 'manage_subjects' ||
                     p.name === 'manage_fcm_tokens' // FCM tokens
             );
 

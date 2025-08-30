@@ -1,12 +1,25 @@
 const { body } = require('express-validator');
 
 exports.gradeValidator = [
-  body('archive_id').isInt({min:1}).withMessage('Invalid archive_id'),
-  body('subject_id').isInt({min:1}).withMessage('Invalid subject_id'),
-  body('semester_id').isInt({min:1}).withMessage('Invalid semester_id'),
-  body('min_score').isInt({min:1}).withMessage('Invalid min_score'),
-  body('max_score').isInt({min:1}).withMessage('Invalid max_score'),
-  body('grade').isInt({min:1}).withMessage('Invalid grade'),
-  body('type').isLength({ min: 1 }).withMessage('Invalid type'),
- 
+    body('archive_id').isInt({ min: 1 }).withMessage('Invalid archive_id'),
+    body('subject_id').isInt({ min: 1 }).withMessage('Invalid subject_id'),
+    body('semester_id').isInt({ min: 1 }).withMessage('Invalid semester_id'),
+    body('min_score').isInt({ min: 1 }).withMessage('Invalid min_score'),
+    body('max_score').isInt({ min: 1 }).withMessage('Invalid max_score'),
+    body('grade').isInt({ min: 1 }).withMessage('Invalid grade'),
+    body('type').isLength({ min: 1 }).withMessage('Invalid type'),
+];
+
+exports.assignMarkValidator = [
+    body('subject_id').isInt({ min: 1 }).withMessage('Invalid subject_id'),
+    body('max_score').isFloat({ min: 0.01 }).withMessage('Invalid max_score'),
+    body('student_score')
+        .isFloat({ min: 0 })
+        .withMessage('Invalid student_score'),
+    body('type')
+        .isIn(['exam', 'quiz', 'worksheet', 'assignment'])
+        .withMessage(
+            'Invalid type. Must be exam, quiz, worksheet, or assignment'
+        ),
+    body('student_id').isInt({ min: 1 }).withMessage('Invalid student_id'),
 ];

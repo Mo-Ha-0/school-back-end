@@ -3,7 +3,10 @@ const router = express.Router();
 const gradeController = require('../controllers/gradeController');
 const { checkRoles } = require('../../middleware/roleMiddleware');
 const authMiddleware = require('../../middleware/authMiddleware');
-const { gradeValidator } = require('../validators/gradeValidator');
+const {
+    gradeValidator,
+    assignMarkValidator,
+} = require('../validators/gradeValidator');
 const hasPermission = require('../../middleware/hasPermission');
 
 router.post(
@@ -12,6 +15,14 @@ router.post(
     authMiddleware,
     hasPermission('manage_grades'),
     gradeController.createGrade
+);
+
+router.post(
+    '/assign-mark',
+    assignMarkValidator,
+    authMiddleware,
+    hasPermission('manage_grades'),
+    gradeController.assignMark
 );
 
 router.get(
