@@ -18,7 +18,7 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    hasPermission('manage_student_attendance'),
+    hasPermission('manage_student_attendance', 'student_mobile_app'),
     attendanceStudentsController.getAllAttendanceStudents
 );
 router.get(

@@ -393,6 +393,124 @@ School Administration Team`
         }
     },
 
+    // Helper method to create a single student (extracted from createStudent)
+    async createSingleStudent(studentData, trx = null) {
+        const {
+            name,
+            email,
+            phone,
+            birth_date,
+            class_id,
+            grade_level,
+            discount_percentage,
+        } = studentData;
+
+        // Get student role
+        const role = await roleService.getRoleByName('student');
+        if (!role || role.length === 0) {
+            throw new Error('Student role not found in system.');
+        }
+
+        // Get curriculum
+        const curriculum = await studentService.getCurriculumId(grade_level);
+        if (!curriculum) {
+            throw new Error(
+                `No curriculum found for grade level: ${grade_level}`
+            );
+        }
+
+        // Generate password and hash
+        const password = userService.generateRandomPassword();
+        const hash = bcrypt.hashSync(password);
+
+        // Create user
+        const user = await userService.createUser(
+            {
+                name: name,
+                birth_date: birth_date,
+                email: email,
+                phone: phone,
+                role_id: role[0].id,
+                password_hash: hash,
+            },
+            trx
+        );
+
+        // Send welcome message (non-blocking)
+        if (user[0]) {
+            try {
+                await userService.sendWhatsAppMessage(
+                    user[0].phone,
+                    `🎓 Welcome to Our School!
+
+Dear Student,
+
+Your account has been successfully created. Here are your login credentials:
+
+📧 Email: ${email}
+🔑 Password: ${password}
+
+Please keep these credentials safe and do not share them with anyone.
+
+You can now log in to your student portal and access your academic information.
+
+Best regards,
+School Administration Team`
+                );
+            } catch (msgError) {
+                // Log but don't fail the transaction for WhatsApp errors
+                logError('WhatsApp message failed', msgError, {
+                    userId: user[0].id,
+                });
+            }
+        }
+
+        // Create student
+        const student = await studentService.createStudent(
+            {
+                user_id: user[0].id,
+                class_id: class_id,
+                curriculum_id: curriculum.id,
+                grade_level: grade_level,
+            },
+            trx
+        );
+
+        // Handle tuition payment setup
+        const today = new Date().toISOString().split('T')[0];
+        let currentAcademicYear = await db('academic_years')
+            .where('start_year', '<=', today)
+            .andWhere('end_year', '>=', today)
+            .orderBy('start_year', 'desc')
+            .first()
+            .transacting(trx);
+
+        if (!currentAcademicYear) {
+            currentAcademicYear = await db('academic_years')
+                .orderBy('start_year', 'desc')
+                .first()
+                .transacting(trx);
+        }
+
+        if (currentAcademicYear) {
+            const fullTuition = Number(currentAcademicYear.full_tuition) || 0;
+            const discount = discount_percentage || 0;
+            const remainingTuition = Number(
+                (fullTuition * (1 - discount / 100)).toFixed(2)
+            );
+
+            await db('archives')
+                .insert({
+                    student_id: student[0].id,
+                    academic_year_id: currentAcademicYear.id,
+                    remaining_tuition: remainingTuition,
+                })
+                .transacting(trx);
+        }
+
+        return { user: user[0], student: student[0], password };
+    },
+
     async createStudentsFromExcel(req, res) {
         try {
             if (!req.file) {
@@ -425,15 +543,6 @@ School Administration Team`
                 });
             }
 
-            // Get student role
-            const role = await roleService.getRoleByName('student');
-            if (!role || role.length === 0) {
-                await ExcelService.cleanupFile(filePath);
-                return res
-                    .status(400)
-                    .json({ error: 'Student role not found' });
-            }
-
             const results = {
                 created: [],
                 errors: [],
@@ -455,117 +564,13 @@ School Administration Team`
                         continue;
                     }
 
-                    // Get curriculum ID
-                    const curriculum = await studentService.getCurriculumId(
-                        studentData.grade_level
-                    );
-                    if (!curriculum) {
-                        results.errors.push({
-                            email: studentData.email,
-                            error: `No curriculum found for grade level: ${studentData.grade_level}`,
-                        });
-                        continue;
-                    }
-
-                    // Generate password and hash
-                    const password = userService.generateRandomPassword();
-                    const hash = bcrypt.hashSync(password);
-
-                    // Create user and student within transaction
-                    const result = await db.transaction(async (trx) => {
-                        // Create user
-                        const user = await userService.createUser(
-                            {
-                                name: studentData.name,
-                                birth_date: studentData.birth_date,
-                                email: studentData.email,
-                                phone: studentData.phone,
-                                role_id: role[0].id,
-                                password_hash: hash,
-                            },
-                            trx
-                        );
-
-                        if (user[0]) {
-                            try {
-                                const sendMessage =
-                                    await userService.sendWhatsAppMessage(
-                                        user[0].phone,
-                                        `🎓 Welcome to Our School!
-
-Dear Student,
-
-Your account has been successfully created. Here are your login credentials:
-
-📧 Email: ${email}
-🔑 Password: ${password}
-
-Please keep these credentials safe and do not share them with anyone.
-
-You can now log in to your student portal and access your academic information.
-
-Best regards,
-School Administration Team`
-                                    );
-                            } catch (msgError) {
-                                // Log but don't fail the transaction for WhatsApp errors
-                                logError('WhatsApp message failed', msgError, {
-                                    userId: user[0].id,
-                                });
-                            }
-                        }
-                        // Create student
-                        const student = await studentService.createStudent(
-                            {
-                                user_id: user[0].id,
-                                class_id: studentData.class_id,
-                                curriculum_id: curriculum.id,
-                                grade_level: studentData.grade_level,
-                            },
-                            trx
-                        );
-
-                        // Handle tuition payment setup
-                        const today = new Date().toISOString().split('T')[0];
-                        let currentAcademicYear = await db('academic_years')
-                            .where('start_year', '<=', today)
-                            .andWhere('end_year', '>=', today)
-                            .orderBy('start_year', 'desc')
-                            .first()
-                            .transacting(trx);
-
-                        if (!currentAcademicYear) {
-                            currentAcademicYear = await db('academic_years')
-                                .orderBy('start_year', 'desc')
-                                .first()
-                                .transacting(trx);
-                        }
-
-                        if (currentAcademicYear) {
-                            const fullTuition =
-                                Number(currentAcademicYear.full_tuition) || 0;
-                            const discount =
-                                studentData.discount_percentage || 0;
-                            const remainingTuition = Number(
-                                (fullTuition * (1 - discount / 100)).toFixed(2)
-                            );
-
-                            await db('archives')
-                                .insert({
-                                    student_id: student[0].id,
-                                    academic_year_id: currentAcademicYear.id,
-                                    remaining_tuition: remainingTuition,
-                                })
-                                .transacting(trx);
-                        }
-
-                        return { user: user[0], student: student[0] };
-                    });
+                    // Create student using the helper method
+                    const result = await this.createSingleStudent(studentData);
 
                     results.created.push({
                         email: studentData.email,
                         name: studentData.name,
-                        password: password,
+                        password: result.password,
                     });
                 } catch (error) {
                     results.errors.push({
