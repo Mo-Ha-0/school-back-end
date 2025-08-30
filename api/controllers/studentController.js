@@ -828,6 +828,9 @@ School Administration Team`
                 totalProcessed: validation.validStudents.length,
             };
 
+            // Store reference to createStudent method
+            const createStudentMethod = module.exports.createStudent;
+
             // Process each valid student
             for (const studentData of validation.validStudents) {
                 try {
@@ -888,7 +891,7 @@ School Administration Team`
                     };
 
                     // Call the createStudent controller method
-                    await this.createStudent(mockReq, mockRes);
+                    await createStudentMethod(mockReq, mockRes);
                 } catch (error) {
                     results.errors.push({
                         email: studentData.email,
