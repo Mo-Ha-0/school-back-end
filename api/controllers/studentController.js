@@ -393,219 +393,6 @@ School Administration Team`
         }
     },
 
-    // Helper method to create a single student (extracted from createStudent)
-    async createSingleStudent(studentData, trx = null) {
-        const {
-            name,
-            email,
-            phone,
-            birth_date,
-            class_id,
-            grade_level,
-            discount_percentage,
-        } = studentData;
-
-        // Get student role
-        const role = await roleService.getRoleByName('student');
-        if (!role || role.length === 0) {
-            throw new Error('Student role not found in system.');
-        }
-
-        // Get curriculum
-        const curriculum = await studentService.getCurriculumId(grade_level);
-        if (!curriculum) {
-            throw new Error(
-                `No curriculum found for grade level: ${grade_level}`
-            );
-        }
-
-        // Generate password and hash
-        const password = userService.generateRandomPassword();
-        const hash = bcrypt.hashSync(password);
-
-        // Create user
-        const user = await userService.createUser(
-            {
-                name: name,
-                birth_date: birth_date,
-                email: email,
-                phone: phone,
-                role_id: role[0].id,
-                password_hash: hash,
-            },
-            trx
-        );
-
-        // Send welcome message (non-blocking)
-        if (user[0]) {
-            try {
-                await userService.sendWhatsAppMessage(
-                    user[0].phone,
-                    `🎓 Welcome to Our School!
-
-Dear Student,
-
-Your account has been successfully created. Here are your login credentials:
-
-📧 Email: ${email}
-🔑 Password: ${password}
-
-Please keep these credentials safe and do not share them with anyone.
-
-You can now log in to your student portal and access your academic information.
-
-Best regards,
-School Administration Team`
-                );
-            } catch (msgError) {
-                // Log but don't fail the transaction for WhatsApp errors
-                logError('WhatsApp message failed', msgError, {
-                    userId: user[0].id,
-                });
-            }
-        }
-
-        // Create student
-        const student = await studentService.createStudent(
-            {
-                user_id: user[0].id,
-                class_id: class_id,
-                curriculum_id: curriculum.id,
-                grade_level: grade_level,
-            },
-            trx
-        );
-
-        // Handle tuition payment setup
-        const today = new Date().toISOString().split('T')[0];
-        let currentAcademicYear = await db('academic_years')
-            .where('start_year', '<=', today)
-            .andWhere('end_year', '>=', today)
-            .orderBy('start_year', 'desc')
-            .first()
-            .transacting(trx);
-
-        if (!currentAcademicYear) {
-            currentAcademicYear = await db('academic_years')
-                .orderBy('start_year', 'desc')
-                .first()
-                .transacting(trx);
-        }
-
-        if (currentAcademicYear) {
-            const fullTuition = Number(currentAcademicYear.full_tuition) || 0;
-            const discount = discount_percentage || 0;
-            const remainingTuition = Number(
-                (fullTuition * (1 - discount / 100)).toFixed(2)
-            );
-
-            await db('archives')
-                .insert({
-                    student_id: student[0].id,
-                    academic_year_id: currentAcademicYear.id,
-                    remaining_tuition: remainingTuition,
-                })
-                .transacting(trx);
-        }
-
-        return { user: user[0], student: student[0], password };
-    },
-
-    async createStudentsFromExcel(req, res) {
-        try {
-            if (!req.file) {
-                return res.status(400).json({ error: 'No file uploaded' });
-            }
-
-            const filePath = req.file.path;
-
-            // Read and parse Excel file
-            const students = await ExcelService.readExcelFile(filePath);
-
-            // Validate student data
-            const validation = ExcelService.validateStudentData(students);
-
-            if (validation.errors.length > 0) {
-                // Clean up the uploaded file
-                await ExcelService.cleanupFile(filePath);
-
-                return res.status(400).json({
-                    error: 'Validation errors found in Excel file',
-                    errors: validation.errors,
-                    message: 'Please fix the errors and upload again',
-                });
-            }
-
-            if (validation.validStudents.length === 0) {
-                await ExcelService.cleanupFile(filePath);
-                return res.status(400).json({
-                    error: 'No valid student data found in Excel file',
-                });
-            }
-
-            const results = {
-                created: [],
-                errors: [],
-                totalProcessed: validation.validStudents.length,
-            };
-
-            // Process each valid student
-            for (const studentData of validation.validStudents) {
-                try {
-                    // Check if user already exists
-                    const existingUser = await userService.getUserByEmail(
-                        studentData.email
-                    );
-                    if (existingUser) {
-                        results.errors.push({
-                            email: studentData.email,
-                            error: 'User with this email already exists',
-                        });
-                        continue;
-                    }
-
-                    // Create student using the helper method
-                    const result = await this.createSingleStudent(studentData);
-
-                    results.created.push({
-                        email: studentData.email,
-                        name: studentData.name,
-                        password: result.password,
-                    });
-                } catch (error) {
-                    results.errors.push({
-                        email: studentData.email,
-                        error: error.message,
-                    });
-                }
-            }
-
-            // Clean up the uploaded file
-            await ExcelService.cleanupFile(filePath);
-
-            // Return results
-            res.status(200).json({
-                message: 'Bulk student creation completed',
-                results: results,
-                summary: {
-                    totalProcessed: results.totalProcessed,
-                    successfullyCreated: results.created.length,
-                    errors: results.errors.length,
-                },
-            });
-        } catch (error) {
-            // Clean up file in case of error
-            if (req.file) {
-                await ExcelService.cleanupFile(req.file.path);
-            }
-
-            res.status(500).json({
-                error: 'Error processing Excel file',
-                details: error.message,
-            });
-        }
-    },
-
     async getStudentScoreCard(req, res) {
         try {
             const student = await studentService.findByUserId(req.user.id);
@@ -997,6 +784,139 @@ School Administration Team`
             console.error('Advanced search error:', error);
             res.status(500).json({
                 error: 'Error performing advanced search',
+                details: error.message,
+            });
+        }
+    },
+
+    async createStudentsFromExcel(req, res) {
+        try {
+            if (!req.file) {
+                return res.status(400).json({ error: 'No file uploaded' });
+            }
+
+            const filePath = req.file.path;
+
+            // Read and parse Excel file
+            const students = await ExcelService.readExcelFile(filePath);
+
+            // Validate student data
+            const validation = ExcelService.validateStudentData(students);
+
+            if (validation.errors.length > 0) {
+                // Clean up the uploaded file
+                await ExcelService.cleanupFile(filePath);
+
+                return res.status(400).json({
+                    error: 'Validation errors found in Excel file',
+                    errors: validation.errors,
+                    message: 'Please fix the errors and upload again',
+                });
+            }
+
+            if (validation.validStudents.length === 0) {
+                await ExcelService.cleanupFile(filePath);
+                return res.status(400).json({
+                    error: 'No valid student data found in Excel file',
+                });
+            }
+
+            const results = {
+                created: [],
+                errors: [],
+                totalProcessed: validation.validStudents.length,
+            };
+
+            // Process each valid student
+            for (const studentData of validation.validStudents) {
+                try {
+                    // Check if user already exists
+                    const existingUser = await userService.getUserByEmail(
+                        studentData.email
+                    );
+                    if (existingUser) {
+                        results.errors.push({
+                            email: studentData.email,
+                            error: 'User with this email already exists',
+                        });
+                        continue;
+                    }
+
+                    // Create a mock request object to call createStudent controller
+                    const mockReq = {
+                        body: {
+                            name: studentData.name,
+                            email: studentData.email,
+                            phone: studentData.phone,
+                            birth_date: studentData.birth_date,
+                            class_id: studentData.class_id,
+                            grade_level: studentData.grade_level,
+                            discount_percentage:
+                                studentData.discount_percentage,
+                        },
+                        user: req.user, // Pass along the authenticated user context
+                    };
+
+                    // Create a mock response object to capture the response
+                    const mockRes = {
+                        status: (code) => ({
+                            json: (data) => {
+                                if (code === 201) {
+                                    // Success - extract password from the response
+                                    const password =
+                                        data.student?.password ||
+                                        'Generated password';
+                                    results.created.push({
+                                        email: studentData.email,
+                                        name: studentData.name,
+                                        password: password,
+                                    });
+                                } else {
+                                    // Error
+                                    results.errors.push({
+                                        email: studentData.email,
+                                        error:
+                                            data.error ||
+                                            data.message ||
+                                            'Unknown error',
+                                    });
+                                }
+                                return mockRes;
+                            },
+                        }),
+                    };
+
+                    // Call the createStudent controller method
+                    await this.createStudent(mockReq, mockRes);
+                } catch (error) {
+                    results.errors.push({
+                        email: studentData.email,
+                        error: error.message,
+                    });
+                }
+            }
+
+            // Clean up the uploaded file
+            await ExcelService.cleanupFile(filePath);
+
+            // Return results
+            res.status(200).json({
+                message: 'Bulk student creation completed',
+                results: results,
+                summary: {
+                    totalProcessed: results.totalProcessed,
+                    successfullyCreated: results.created.length,
+                    errors: results.errors.length,
+                },
+            });
+        } catch (error) {
+            // Clean up file in case of error
+            if (req.file) {
+                await ExcelService.cleanupFile(req.file.path);
+            }
+
+            res.status(500).json({
+                error: 'Error processing Excel file',
                 details: error.message,
             });
         }
