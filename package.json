@@ -4,7 +4,7 @@
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "npm run db:fresh && node server.js",
+        "start": "npx knex seed:run --specific 1_permissions_and_roles_seed.js && node server.js",
         "dev": "nodemon server.js",
         "seed": "npx knex seed:run --specific 0_comprehensive_school_seed.js",
         "seed:run": "npx knex seed:run --specific 0_comprehensive_school_seed.js",
