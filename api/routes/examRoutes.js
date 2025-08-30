@@ -23,13 +23,13 @@ router.get(
 router.get(
     '/exams',
     authMiddleware,
-    hasPermission('get_exams'),
+    // hasPermission('get_exams'),
     examController.getExams
 );
 router.get(
     '/quizzes',
     authMiddleware,
-    hasPermission('get_exams'),
+    // hasPermission('get_exams'),
     examController.getQuizzes
 );
 router.get(
