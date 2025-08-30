@@ -30,6 +30,7 @@ router.post(
 router.post(
     '/bulk',
     bulkCreatePaymentsValidation,
+    authMiddleware,
     hasPermission('manage_tuition_payments'),
     tuitionPaymentController.bulkCreatePayments
 );
@@ -46,6 +47,7 @@ router.get(
 router.get(
     '/stats',
     paymentStatsValidation,
+    authMiddleware,
     hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getPaymentStats
 );
@@ -54,6 +56,7 @@ router.get(
 router.get(
     '/date-range',
     dateRangeValidation,
+    authMiddleware,
     hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getPaymentsByDateRange
 );
@@ -61,6 +64,7 @@ router.get(
 // Get outstanding payments
 router.post(
     '/outstanding',
+    authMiddleware,
     hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getOutstandingPayments
 );
@@ -84,6 +88,7 @@ router.put(
 router.patch(
     '/:id/verify',
     verifyPaymentValidation,
+    authMiddleware,
     hasPermission('manage_tuition_payments'),
     tuitionPaymentController.verifyPayment
 );
@@ -99,6 +104,7 @@ router.delete(
 router.get(
     '/student/:student_id',
     getStudentPaymentsValidation,
+    authMiddleware,
     hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getStudentPayments
 );
@@ -107,6 +113,7 @@ router.get(
 router.get(
     '/student/:student_id/total',
     getStudentPaymentsValidation,
+    authMiddleware,
     hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getStudentPaymentTotal
 );
@@ -115,6 +122,7 @@ router.get(
 router.get(
     '/student/:student_id/balance',
     getStudentPaymentsValidation,
+    authMiddleware,
     hasPermission('manage_tuition_payments'),
     tuitionPaymentController.getStudentBalance
 );
