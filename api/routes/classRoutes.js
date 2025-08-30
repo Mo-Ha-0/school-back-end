@@ -16,14 +16,22 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    hasPermission('manage_classes', 'student_mobile_app'),
+    hasPermission(
+        'manage_classes',
+        'student_mobile_app',
+        'attendance_mobile_app'
+    ),
     classController.getAllClasses
 );
 
 router.get(
     '/students',
     authMiddleware,
-    hasPermission('manage_classes', 'student_mobile_app'),
+    hasPermission(
+        'manage_classes',
+        'student_mobile_app',
+        'attendance_mobile_app'
+    ),
     classController.getStudentsInClass
 );
 router.get(

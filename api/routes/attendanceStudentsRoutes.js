@@ -12,13 +12,13 @@ router.post(
     '/',
     attendanceStudentsValidator,
     authMiddleware,
-    hasPermission('manage_student_attendance', 'student_mobile_app'),
+    hasPermission('manage_student_attendance', 'attendance_mobile_app'),
     attendanceStudentsController.createAttendanceStudents
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('manage_student_attendance', 'student_mobile_app'),
+    hasPermission('manage_student_attendance', 'attendance_mobile_app'),
     attendanceStudentsController.getAllAttendanceStudents
 );
 router.get(
