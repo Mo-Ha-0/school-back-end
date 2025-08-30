@@ -33,8 +33,8 @@ class AttendanceStudents {
     static async findByStudentId(studentId) {
         return await db('attendance_students')
             .where({ student_id: studentId })
-            .orderBy('date', 'desc')
-            .limit(30); // Get last 30 attendance records
+            .orderBy('date', 'desc');
+        // .limit(30); // Get last 30 attendance records
     }
 }
 
