@@ -12,7 +12,7 @@ router.post(
     '/',
     attendanceStudentsValidator,
     authMiddleware,
-    hasPermission('manage_student_attendance'),
+    hasPermission('manage_student_attendance', 'student_mobile_app'),
     attendanceStudentsController.createAttendanceStudents
 );
 router.get(
