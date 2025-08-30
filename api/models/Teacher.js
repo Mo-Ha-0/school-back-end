@@ -241,6 +241,20 @@ class Teacher {
             .join('users as u', 'u.id', 'st.user_id')
             .join('classes as c', 'c.id', 'st.class_id')
             .leftJoin('attendance_students as att', 'att.student_id', 'st.id')
+            .leftJoin('archives as a', function () {
+                this.on('a.student_id', '=', 'st.id').andOn(
+                    'a.academic_year_id',
+                    '=',
+                    function () {
+                        this.select('id')
+                            .from('academic_years')
+                            .where('end_year', '>=', new Date())
+                            .orderBy('end_year', 'desc')
+                            .first();
+                    }
+                );
+            })
+            .leftJoin('grades as g', 'g.archive_id', 'a.id')
             .whereIn('st.class_id', classIdsQuery)
             .select(
                 'st.id',
@@ -260,6 +274,9 @@ class Teacher {
                             (COUNT(CASE WHEN att.status = 'present' THEN 1 END) * 100.0 / COUNT(att.id)), 2
                         )
                     END as attendance_percentage
+                `),
+                db.raw(`
+                    COALESCE(SUM(g.grade), 0) as total_marks
                 `)
             )
             .groupBy(
