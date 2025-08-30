@@ -24,7 +24,7 @@ router.get(
 router.get(
     '/student/:studentId',
     authMiddleware,
-    // hasPermission('get_students_attendance'),
+    hasPermission('manage_student_attendance'),
     attendanceStudentsController.getAttendanceByStudentId
 );
 

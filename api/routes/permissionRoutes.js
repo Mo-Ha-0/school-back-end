@@ -17,7 +17,7 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('manage_permissions'),
+    hasPermission('manage_roles'),
     permissionController.getAllPermissions
 );
 

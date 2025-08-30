@@ -10,35 +10,35 @@ router.post(
     '/',
     dayValidator,
     authMiddleware,
-    hasPermission('manage_days_periods'),
+    hasPermission('manage_schedules'),
     dayController.createDay
 );
 
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('get_days'),
+    hasPermission('manage_schedules'),
     dayController.getAllDays
 );
 
 router.get(
     '/:id',
     authMiddleware,
-    // hasPermission('get_days'),
+    hasPermission('manage_schedules'),
     dayController.getDay
 );
 
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('manage_days_periods'),
+    hasPermission('manage_schedules'),
     dayController.updateDay
 );
 
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('manage_days_periods'),
+    hasPermission('manage_schedules'),
     dayController.deleteDay
 );
 

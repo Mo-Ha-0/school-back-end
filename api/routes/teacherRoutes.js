@@ -23,33 +23,33 @@ router.get(
 router.get(
     '/questions',
     authMiddleware,
-    // hasPermission('get_questions'),
+    hasPermission('manage_exams'),
     teacherController.getQuestions
 );
 router.get(
     '/subjects',
     authMiddleware,
-    // hasPermission('get_subjectsman'),
+    hasPermission('manage_subjects'),
     teacherController.getSubjects
 );
 
 router.get(
     '/students',
     authMiddleware,
-    // hasPermission('get_students'),
+    hasPermission('manage_students'),
     teacherController.getStudents
 );
 
 router.get(
     '/schedule',
     authMiddleware,
-    hasPermission('view_teacher_schedules'),
+    hasPermission('manage_schedules'),
     teacherController.getTeacherSchedule
 );
 router.get(
     '/classes',
     authMiddleware,
-    // hasPermission('get_classes'),
+    hasPermission('manage_classes'),
     teacherController.getClassesByTeacher
 );
 router.get(

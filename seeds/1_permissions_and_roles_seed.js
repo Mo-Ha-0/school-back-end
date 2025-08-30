@@ -33,58 +33,64 @@ exports.seed = async function (knex) {
         console.log('\n🔑 Phase 2: Creating new consolidated permissions...');
 
         const permissionsList = [
-            // Academic Management
-            { name: 'manage_academic_years' }, // create, read, update, delete academic years
-            { name: 'manage_semesters' }, // create, read, update, delete semesters
-            { name: 'manage_curriculums' }, // create, read, update, delete curriculums
-            { name: 'manage_subjects' }, // create, read, update, delete subjects
-            { name: 'manage_classes' }, // create, read, update, delete classes
+            // ================================================================
+            // CORE ACADEMIC MANAGEMENT (8 permissions)
+            // ================================================================
+            { name: 'manage_academic_years' }, // CRUD academic years and semesters
+            { name: 'manage_subjects' }, // CRUD subjects and curriculums
+            { name: 'manage_classes' }, // CRUD classes, view class students
+            { name: 'manage_schedules' }, // CRUD schedules, days, periods
 
-            // Student Management
-            { name: 'manage_students' }, // create, read, update, delete students
-            { name: 'view_student_profiles' }, // get student profiles, grades, exams
-            { name: 'manage_student_archives' }, // create, read, update, delete archives
+            // ================================================================
+            // PEOPLE MANAGEMENT (4 permissions)
+            // ================================================================
+            { name: 'manage_students' }, // CRUD students, view profiles, archives
+            { name: 'manage_teachers' }, // CRUD teachers, assign subjects
+            { name: 'manage_users' }, // CRUD users and employees
+            { name: 'manage_roles' }, // CRUD roles and assign permissions
 
-            // Teacher Management
-            { name: 'manage_teachers' }, // create, read, update, delete teachers
-            { name: 'assign_teacher_subjects' }, // assign teachers to subjects
-            { name: 'view_teacher_schedules' }, // view teacher schedules and classes
+            // ================================================================
+            // ASSESSMENT SYSTEM (4 permissions)
+            // ================================================================
+            { name: 'manage_exams' }, // CRUD exams, questions, attempts (teacher/admin)
+            { name: 'take_exams' }, // Take exams/quizzes, view upcoming (student mobile)
+            { name: 'view_exam_results' }, // View exam results and analytics
+            { name: 'manage_grades' }, // Input, edit, delete grades and scorecards
 
-            // Exam Management
-            { name: 'manage_exams' }, // create, read, update, delete exams
-            { name: 'manage_questions' }, // create, read, update, delete questions and options
-            { name: 'manage_exam_attempts' }, // create, read, update, delete exam attempts
-            { name: 'view_exam_results' }, // view exam results and analytics
+            // ================================================================
+            // ATTENDANCE SYSTEM (3 permissions)
+            // ================================================================
+            { name: 'manage_student_attendance' }, // CRUD student attendance
+            { name: 'manage_staff_attendance' }, // CRUD teacher/employee attendance
+            { name: 'view_attendance_reports' }, // View attendance analytics
 
-            // Grade Management
-            { name: 'manage_grades' }, // create, read, update, delete grades
+            // ================================================================
+            // BEHAVIOR SYSTEM (2 permissions)
+            // ================================================================
+            { name: 'manage_behaviors' }, // CRUD behavior records
+            { name: 'view_own_behaviors' }, // View own behaviors (students)
 
-            // Attendance Management
-            { name: 'manage_student_attendance' }, // create, read, update, delete student attendance
-            { name: 'manage_teacher_attendance' }, // create, read, update, delete teacher attendance
-            { name: 'manage_employee_attendance' }, // create, read, update, delete employee attendance
-            { name: 'view_attendance_reports' }, // view attendance reports and analytics
+            // ================================================================
+            // FINANCIAL SYSTEM (2 permissions)
+            // ================================================================
+            { name: 'manage_tuition_payments' }, // CRUD and verify payments
+            { name: 'view_payment_reports' }, // View financial reports
 
-            // Behavior Management
-            { name: 'manage_behaviors' }, // create, read, update, delete behaviors
-            { name: 'view_behavior_reports' }, // view behavior reports and analytics
+            // ================================================================
+            // COMMUNICATION SYSTEM (3 permissions)
+            // ================================================================
+            { name: 'manage_notifications' }, // CRUD and send notifications
+            { name: 'view_notifications' }, // View notifications (mobile apps)
+            { name: 'manage_fcm_tokens' }, // Manage push tokens
 
-            // Schedule Management
-            { name: 'manage_schedules' }, // create, read, update, delete schedules
-            { name: 'manage_days_periods' }, // create, read, update, delete days and periods
-
-            // Financial Management
-            { name: 'manage_tuition_payments' }, // create, read, update, delete tuition payments
-
-            // User Management
-            { name: 'manage_users' }, // create, read, update, delete users
-            { name: 'manage_roles' }, // create, read, update, delete roles
-            { name: 'manage_permissions' }, // create, read, update, delete permissions
-
-            // System Management
-            { name: 'view_dashboard' }, // view system dashboard and analytics
-            { name: 'manage_notifications' }, // create, read, update, delete notifications
-            { name: 'manage_fcm_tokens' }, // manage push notification tokens
+            // ================================================================
+            // DASHBOARD AND ACCESS (5 permissions)
+            // ================================================================
+            { name: 'view_dashboard' }, // Access admin dashboard
+            { name: 'student_mobile_app' }, // Access student mobile app features
+            { name: 'attendance_mobile_app' }, // Access attendance mobile app
+            { name: 'export_data' }, // Export reports and data
+            { name: 'manage_permissions' }, // Super admin only - manage permissions
         ];
 
         const permissions = await knex('permissions')
@@ -141,13 +147,18 @@ exports.seed = async function (knex) {
         const managerRole = roles.find((role) => role.name === 'manager');
         const accountantRole = roles.find((role) => role.name === 'accountant');
 
-        // Student permissions - basic viewing and self-management
+        // ================================================================
+        // STUDENT ROLE - Mobile App Access + Own Data
+        // ================================================================
         if (studentRole) {
             const studentPermissions = permissions.filter(
                 (p) =>
-                    p.name === 'view_student_profiles' ||
-                    p.name === 'view_exam_results' ||
-                    p.name === 'view_grade_reports'
+                    p.name === 'student_mobile_app' || // Mobile app access
+                    p.name === 'take_exams' || // Take exams and view upcoming
+                    p.name === 'view_exam_results' || // View own exam results
+                    p.name === 'view_own_behaviors' || // View own behaviors
+                    p.name === 'view_notifications' || // View notifications
+                    p.name === 'manage_fcm_tokens' // FCM token management
             );
 
             const studentRolePermissions = studentPermissions.map((p) => ({
@@ -161,23 +172,23 @@ exports.seed = async function (knex) {
             );
         }
 
-        // Teacher permissions - teaching and grading related
+        // ================================================================
+        // TEACHER ROLE - Teaching + Attendance App Access
+        // ================================================================
         if (teacherRole) {
             const teacherPermissions = permissions.filter(
                 (p) =>
-                    p.name === 'manage_students' ||
-                    p.name === 'view_student_profiles' ||
-                    p.name === 'manage_grades' ||
-                    p.name === 'view_grade_reports' ||
-                    p.name === 'manage_exams' ||
-                    p.name === 'manage_questions' ||
-                    p.name === 'manage_exam_attempts' ||
-                    p.name === 'view_exam_results' ||
-                    p.name === 'manage_student_attendance' ||
-                    p.name === 'manage_behaviors' ||
-                    p.name === 'view_teacher_schedules' ||
-                    p.name === 'manage_schedules' ||
-                    p.name === 'view_dashboard'
+                    p.name === 'manage_students' || // Student management
+                    p.name === 'manage_exams' || // Exam and question management
+                    p.name === 'view_exam_results' || // View exam results
+                    p.name === 'manage_grades' || // Grade management
+                    p.name === 'manage_student_attendance' || // Attendance management
+                    p.name === 'manage_behaviors' || // Behavior management
+                    p.name === 'manage_schedules' || // Schedule access
+                    p.name === 'view_dashboard' || // Dashboard access
+                    p.name === 'attendance_mobile_app' || // Attendance app access
+                    p.name === 'view_notifications' || // Notifications
+                    p.name === 'manage_fcm_tokens' // FCM tokens
             );
 
             const teacherRolePermissions = teacherPermissions.map((p) => ({
@@ -191,7 +202,9 @@ exports.seed = async function (knex) {
             );
         }
 
-        // Manager permissions - administrative but not system-level
+        // ================================================================
+        // MANAGER ROLE - Administrative Access
+        // ================================================================
         if (managerRole) {
             const managerPermissions = permissions.filter(
                 (p) =>
@@ -200,15 +213,12 @@ exports.seed = async function (knex) {
                     p.name === 'manage_classes' ||
                     p.name === 'manage_subjects' ||
                     p.name === 'manage_academic_years' ||
-                    p.name === 'manage_semesters' ||
-                    p.name === 'manage_curriculums' ||
                     p.name === 'manage_schedules' ||
-                    p.name === 'manage_days_periods' ||
-                    p.name === 'view_student_profiles' ||
-                    p.name === 'view_teacher_schedules' ||
+                    p.name === 'view_exam_results' ||
                     p.name === 'view_attendance_reports' ||
-                    p.name === 'view_behavior_reports' ||
-                    p.name === 'view_dashboard'
+                    p.name === 'manage_behaviors' ||
+                    p.name === 'view_dashboard' ||
+                    p.name === 'export_data'
             );
 
             const managerRolePermissions = managerPermissions.map((p) => ({
@@ -222,15 +232,16 @@ exports.seed = async function (knex) {
             );
         }
 
-        // Accountant permissions - financial and basic viewing
+        // ================================================================
+        // ACCOUNTANT ROLE - Financial Management
+        // ================================================================
         if (accountantRole) {
             const accountantPermissions = permissions.filter(
                 (p) =>
                     p.name === 'manage_tuition_payments' ||
                     p.name === 'view_payment_reports' ||
-                    p.name === 'verify_payments' ||
-                    p.name === 'view_student_profiles' ||
-                    p.name === 'view_dashboard'
+                    p.name === 'view_dashboard' ||
+                    p.name === 'export_data'
             );
 
             const accountantRolePermissions = accountantPermissions.map(
@@ -281,9 +292,14 @@ exports.seed = async function (knex) {
         );
         console.log('='.repeat(50));
         console.log('\n📝 Summary:');
-        console.log('- Created 30 consolidated permissions');
+        console.log(
+            `- Created ${permissionsList.length} consolidated permissions`
+        );
         console.log('- Assigned ALL permissions to admin role');
         console.log('- Assigned appropriate permissions to other roles');
+        console.log(
+            '- Added mobile app permissions for student and attendance apps'
+        );
         console.log('- Ready to use with the new permission system!');
     } catch (error) {
         console.error('\n❌ ERROR during permissions seeding:', error.message);

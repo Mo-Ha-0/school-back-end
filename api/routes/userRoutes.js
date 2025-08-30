@@ -19,7 +19,7 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('get_users'),
+    hasPermission('manage_users'),
     userController.getAllUsers
 );
 router.get(

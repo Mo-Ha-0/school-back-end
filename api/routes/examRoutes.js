@@ -23,57 +23,57 @@ router.get(
 router.get(
     '/exams',
     authMiddleware,
-    // hasPermission('get_exams'),
+    hasPermission('take_exams'),
     examController.getExams
 );
 router.get(
     '/quizzes',
     authMiddleware,
-    // hasPermission('get_exams'),
+    hasPermission('take_exams'),
     examController.getQuizzes
 );
 router.get(
     '/student-preexams',
     authMiddleware,
-    // hasPermission('get_preexams'),
+    hasPermission('take_exams'),
     examController.getAllPreExamsForSemester
 );
 router.get(
     '/student-prequizzes',
     authMiddleware,
-    // hasPermission('get_preexams'),
+    hasPermission('take_exams'),
     examController.getAllPreQuizzesForSemester
 );
 router.get(
     '/student-nextexams',
     authMiddleware,
-    // hasPermission('get_next_exams'),
+    hasPermission('take_exams'),
     examController.getUpComingExam
 );
 router.get(
     '/student-nextquizzes',
     authMiddleware,
-    // hasPermission('get_next_exams'),
+    hasPermission('take_exams'),
     examController.getUpComingQuiz
 );
 router.get(
     '/subject/:subject_id/semesters',
     authMiddleware,
-    // hasPermission('get_preexams'),
+    hasPermission('take_exams'),
     examController.getsemestersBySubjectForPreExam
 );
 
 router.get(
     '/subject/:subject_id/quiz-semesters',
     authMiddleware,
-    // hasPermission('get_preexams'),
+    hasPermission('take_exams'),
     examController.getsemestersBySubjectForPreQuiz
 );
 
 router.get(
     '/questions',
     authMiddleware,
-    // hasPermission('get_exam_questions'),
+    hasPermission('take_exams'),
     examController.getExamQuestion
 );
 
@@ -93,7 +93,7 @@ router.post('/quiz/:quizId/submit', examController.submitQuizAnswers);
 router.get(
     '/:id',
     authMiddleware,
-    // hasPermission('get_exams'),
+    hasPermission('take_exams'),
     examController.getExam
 );
 

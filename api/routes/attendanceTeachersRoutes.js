@@ -12,37 +12,37 @@ router.post(
     '/',
     attendanceTeachersValidator,
     authMiddleware,
-    hasPermission('manage_teacher_attendance'),
+    hasPermission('manage_staff_attendance'),
     attendanceTeachersController.createAttendanceTeachers
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('manage_teacher_attendance'),
+    hasPermission('manage_staff_attendance'),
     attendanceTeachersController.getAllAttendanceTeachers
 );
 router.get(
     '/teacher/:teacherId',
     authMiddleware,
-    hasPermission('manage_teacher_attendance'),
+    hasPermission('manage_staff_attendance'),
     attendanceTeachersController.getAttendanceByTeacherId
 );
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('manage_teacher_attendance'),
+    hasPermission('manage_staff_attendance'),
     attendanceTeachersController.getAttendanceTeachers
 );
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('manage_teacher_attendance'),
+    hasPermission('manage_staff_attendance'),
     attendanceTeachersController.updateAttendanceTeachers
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('manage_teacher_attendance'),
+    hasPermission('manage_staff_attendance'),
     attendanceTeachersController.deleteAttendanceTeachers
 );
 

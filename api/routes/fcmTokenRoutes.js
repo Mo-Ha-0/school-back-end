@@ -17,14 +17,14 @@ router.post(
 router.get(
     '/sendMessage',
     authMiddleware,
-    // hasPermission('send_message'),
+    hasPermission('manage_notifications'),
     fcmTokenController.sendMessage
 );
 
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('get_fcm_tokens'),
+    hasPermission('manage_fcm_tokens'),
     fcmTokenController.getAllFcmTokenes
 );
 

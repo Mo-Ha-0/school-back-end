@@ -10,35 +10,35 @@ router.post(
     '/',
     semesterValidator,
     authMiddleware,
-    hasPermission('manage_semesters'),
+    hasPermission('manage_academic_years'),
     semesterController.createSemester
 );
 
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('get_semesters'),
+    hasPermission('manage_academic_years'),
     semesterController.getAllSemesters
 );
 
 router.get(
     '/:id',
     authMiddleware,
-    // hasPermission('get_semesters'),
+    hasPermission('manage_academic_years'),
     semesterController.getSemester
 );
 
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('manage_semesters'),
+    hasPermission('manage_academic_years'),
     semesterController.updateSemester
 );
 
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('manage_semesters'),
+    hasPermission('manage_academic_years'),
     semesterController.deleteSemester
 );
 

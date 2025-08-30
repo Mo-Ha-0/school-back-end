@@ -17,7 +17,7 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('get_grades'),
+    hasPermission('manage_grades'),
     gradeController.getAllGrades
 );
 

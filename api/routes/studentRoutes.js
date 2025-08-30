@@ -25,7 +25,7 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    hasPermission('manage_students'),
+    hasPermission('manage_students', 'manage_tuition_payments'),
     studentController.getAllStudents
 );
 
@@ -46,13 +46,13 @@ router.post(
 router.get(
     '/scorecard',
     authMiddleware,
-    hasPermission('view_student_profiles'),
+    hasPermission('student_mobile_app'),
     studentController.getStudentScoreCard
 );
 router.get(
     '/subjects',
     authMiddleware,
-    hasPermission('manage_subjects'),
+    hasPermission('student_mobile_app'),
     studentController.getStudentSubjects
 );
 router.get(
@@ -79,14 +79,14 @@ router.get(
 router.get(
     '/schedule',
     authMiddleware,
-    hasPermission('manage_schedules'),
+    hasPermission('student_mobile_app'),
     studentController.getStudentSchedule
 );
 
 router.get(
     '/archive',
     authMiddleware,
-    hasPermission('manage_student_archives'),
+    hasPermission('manage_students'),
     studentController.getStudentArchive
 );
 

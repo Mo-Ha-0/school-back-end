@@ -24,13 +24,13 @@ router.get(
 router.get(
     '/list',
     authMiddleware,
-    // hasPermission('get_subjects'),
+    hasPermission('manage_subjects'),
     subjectController.getSubjectsList
 );
 router.get(
     '/:id',
     authMiddleware,
-    // hasPermission('manage_subjects'),
+    hasPermission('manage_subjects'),
     subjectController.getSubject
 );
 router.put(

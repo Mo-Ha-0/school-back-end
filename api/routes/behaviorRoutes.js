@@ -24,14 +24,14 @@ router.get(
 router.get(
     '/me/list',
     authMiddleware,
-    // hasPermission('get_student_behaviors'),
+    hasPermission('view_own_behaviors'),
     behaviorController.getMyBehaviors
 );
 
 router.get(
     '/:id',
     authMiddleware,
-    // hasPermission('get_behaviors'),
+    hasPermission('manage_behaviors'),
     behaviorController.getBehavior
 );
 

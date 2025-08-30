@@ -16,14 +16,14 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('get_classes'),
+    hasPermission('manage_classes'),
     classController.getAllClasses
 );
 
 router.get(
     '/students',
     authMiddleware,
-    hasPermission('manage_students'),
+    hasPermission('manage_classes'),
     classController.getStudentsInClass
 );
 router.get(

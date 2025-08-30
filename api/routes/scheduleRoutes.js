@@ -17,21 +17,21 @@ router.post(
 router.get(
     '/',
     authMiddleware,
-    // hasPermission('get_schedules'),
+    hasPermission('manage_schedules'),
     scheduleController.getAllSchedules
 );
 
 router.get(
     '/class/:classId',
     authMiddleware,
-    // hasPermission('get_schedules'),
+    hasPermission('manage_schedules'),
     scheduleController.getSchedulesByClass
 );
 
 router.get(
     '/:id',
     authMiddleware,
-    // hasPermission('get_schedules'),
+    hasPermission('manage_schedules'),
     scheduleController.getSchedule
 );
 
