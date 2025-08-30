@@ -24,6 +24,8 @@ exports.seed = async function (knex) {
         // Clear existing permissions
         await knex('permissions').del();
 
+        await knex('fcm_tokens').del();
+
         // Keep existing roles (admin, student, teacher, manager, accountant)
         console.log('✅ Cleared existing permissions and role assignments');
 
