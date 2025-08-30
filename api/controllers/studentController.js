@@ -110,6 +110,7 @@ module.exports = {
                 },
                 trx
             );
+            console.log(user[0]);
 
             // Send welcome message (non-blocking)
             if (user[0]) {
