@@ -11,13 +11,13 @@ router.post(
     '/',
     archiveValidator,
     authMiddleware,
-    hasPermission('manage_student_archives'),
+    hasPermission('manage_students'),
     archiveController.createArchive
 );
 router.get(
     '/',
     authMiddleware,
-    hasPermission('manage_student_archives'),
+    hasPermission('manage_students'),
     archiveController.getAllArchives
 );
 router.get(
@@ -29,19 +29,19 @@ router.get(
 router.get(
     '/:id',
     authMiddleware,
-    hasPermission('manage_student_archives'),
+    hasPermission('manage_students'),
     archiveController.getArchive
 );
 router.put(
     '/:id',
     authMiddleware,
-    hasPermission('manage_student_archives'),
+    hasPermission('manage_students'),
     archiveController.updateArchive
 );
 router.delete(
     '/:id',
     authMiddleware,
-    hasPermission('manage_student_archives'),
+    hasPermission('manage_students'),
     archiveController.deleteArchive
 );
 
