@@ -486,6 +486,34 @@ School Administration Team`
                             trx
                         );
 
+                        if (user[0]) {
+                            try {
+                                const sendMessage =
+                                    await userService.sendWhatsAppMessage(
+                                        user[0].phone,
+                                        `🎓 Welcome to Our School!
+
+Dear Student,
+
+Your account has been successfully created. Here are your login credentials:
+
+📧 Email: ${email}
+🔑 Password: ${password}
+
+Please keep these credentials safe and do not share them with anyone.
+
+You can now log in to your student portal and access your academic information.
+
+Best regards,
+School Administration Team`
+                                    );
+                            } catch (msgError) {
+                                // Log but don't fail the transaction for WhatsApp errors
+                                logError('WhatsApp message failed', msgError, {
+                                    userId: user[0].id,
+                                });
+                            }
+                        }
                         // Create student
                         const student = await studentService.createStudent(
                             {
